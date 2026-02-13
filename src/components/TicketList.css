@@ -1,0 +1,138 @@
+.ticket-list {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.ticket-list h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
+  color: #172b4d;
+}
+
+.date-group {
+  margin-bottom: 2rem;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.date-group-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid;
+}
+
+.overdue-group {
+  background: #ffebe6;
+  border-left: 4px solid #bf2600;
+}
+
+.overdue-group .date-group-title {
+  color: #bf2600;
+  border-bottom-color: #bf2600;
+}
+
+.today-group {
+  background: #e6f2ff;
+  border-left: 4px solid #0052cc;
+}
+
+.today-group .date-group-title {
+  color: #0052cc;
+  border-bottom-color: #0052cc;
+}
+
+.tomorrow-group {
+  background: #e3fcef;
+  border-left: 4px solid #00875a;
+}
+
+.tomorrow-group .date-group-title {
+  color: #00875a;
+  border-bottom-color: #00875a;
+}
+
+.future-group {
+  background: #f4f5f7;
+  border-left: 4px solid #5e6c84;
+}
+
+.future-group .date-group-title {
+  color: #5e6c84;
+  border-bottom-color: #5e6c84;
+}
+
+.none-group {
+  background: #fafbfc;
+  border-left: 4px solid #97a0af;
+}
+
+.none-group .date-group-title {
+  color: #97a0af;
+  border-bottom-color: #97a0af;
+}
+
+.ticket-item {
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  padding: 1rem 0;
+}
+
+.ticket-item:last-child {
+  border-bottom: none;
+}
+
+.ticket-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.ticket-key {
+  font-weight: 600;
+  color: #0052cc;
+  font-size: 0.9rem;
+}
+
+.ticket-type {
+  background: #dfe1e6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.ticket-summary {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #172b4d;
+  margin-bottom: 0.5rem;
+}
+
+.ticket-meta {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.85rem;
+  color: #5e6c84;
+  margin-bottom: 0.5rem;
+}
+
+.ticket-meta-item {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.ticket-meta-label {
+  font-weight: 500;
+}
+
+.ticket-description {
+  color: #5e6c84;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-top: 0.5rem;
+}

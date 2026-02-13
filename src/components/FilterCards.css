@@ -1,0 +1,114 @@
+.filter-cards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 1400px) {
+  .filter-cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 1200px) {
+  .filter-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .filter-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filter-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.filter-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+}
+
+.filter-card.active {
+  border: 2px solid #0052cc;
+}
+
+.filter-card h3 {
+  font-size: 1.1rem;
+  color: #172b4d;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.card-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.status-stats {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background: #f4f5f7;
+  transition: background 0.2s;
+}
+
+.stat-item.clickable:hover {
+  background: #e6f2ff;
+}
+
+.stat-item.active-status {
+  background: #0052cc;
+  color: white;
+}
+
+.stat-item.active-status .stat-label,
+.stat-item.active-status .stat-value {
+  color: white;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #5e6c84;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0052cc;
+}
+
+.assignee-card {
+  grid-column: span 1;
+}
+
+.epic-card {
+  grid-column: span 1;
+}
+
+.status-card {
+  grid-column: span 1;
+}
+
+@media (max-width: 768px) {
+  .filter-cards {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,36 @@
+.app {
+  min-height: 100vh;
+}
+
+.header {
+  background: #0052cc;
+  color: white;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header h1 {
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+  color: #5e6c84;
+}
+
+.error {
+  background: #ffebe6;
+  color: #bf2600;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
