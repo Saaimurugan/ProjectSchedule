@@ -1,4 +1,4 @@
-# JIRA Dashboard
+# MPS JIRA Dashboard
 
 A React dashboard that fetches and displays JIRA tickets with due dates, projects, and descriptions.
 
@@ -38,3 +38,4 @@ You'll need:
 ## Architecture
 
 The app uses a Node.js proxy server to avoid CORS issues when calling JIRA's API from the browser.
+
