@@ -20,6 +20,23 @@
 @media (max-width: 768px) {
   .filter-cards {
     grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .filter-card {
+    padding: 1rem;
+  }
+
+  .filter-card h3 {
+    font-size: 1rem;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+  }
+
+  .stat-value {
+    font-size: 1.1rem;
   }
 }
 
@@ -30,7 +47,10 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   transition: all 0.2s;
   cursor: pointer;
+  min-width: 0;
+  overflow: hidden;
 }
+
 
 .filter-card:hover {
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
@@ -87,6 +107,9 @@
   font-size: 0.9rem;
   color: #5e6c84;
   font-weight: 500;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .stat-value {
@@ -105,10 +128,4 @@
 
 .status-card {
   grid-column: span 1;
-}
-
-@media (max-width: 768px) {
-  .filter-cards {
-    grid-template-columns: 1fr;
-  }
 }

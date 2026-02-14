@@ -146,3 +146,65 @@
   line-height: 1.5;
   margin-top: 0.5rem;
 }
+
+@media (max-width: 768px) {
+  .ticket-list {
+    padding: 1rem;
+  }
+
+  .date-group {
+    padding: 0.75rem;
+  }
+
+  .date-group-title {
+    font-size: 1rem;
+  }
+
+  .ticket-item {
+    padding: 0.75rem;
+  }
+
+  .ticket-header {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .ticket-key {
+    font-size: 0.85rem;
+  }
+
+  .ticket-type {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .ticket-summary {
+    font-size: 0.9rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .ticket-meta {
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .ticket-meta-item {
+    flex-wrap: wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .ticket-meta-item span {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+  }
+
+  .ticket-description {
+    font-size: 0.85rem;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+}
