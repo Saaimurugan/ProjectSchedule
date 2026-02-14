@@ -59,6 +59,7 @@ function Analytics({ tickets }) {
     let tomorrowStoryPoints = 0;
     let futureStoryPoints = 0;
     let noDueDateStoryPoints = 0;
+    let noDueDateTicketCount = 0;
 
     // Count unique assignees (resources)
     const uniqueAssignees = new Set();
@@ -118,6 +119,7 @@ function Analytics({ tickets }) {
           if (typeof points === 'number' && !isNaN(points)) {
             noDueDateStoryPoints += points;
           }
+          noDueDateTicketCount++;
           break;
       }
     });
@@ -153,6 +155,7 @@ function Analytics({ tickets }) {
       tomorrowStoryPoints,
       futureStoryPoints,
       noDueDateStoryPoints,
+      noDueDateTicketCount,
       completionRate: totalStoryPoints > 0 ? ((completedStoryPoints / totalStoryPoints) * 100).toFixed(1) : 0,
       resourceCount,
       totalSprintDays,
@@ -237,7 +240,7 @@ function Analytics({ tickets }) {
 
         <div className="analytics-card warning">
           <div className="analytics-label">No Due Date</div>
-          <div className="analytics-value">{analytics.noDueDateStoryPoints}</div>
+          <div className="analytics-value">{analytics.noDueDateTicketCount}</div>
         </div>
       </div>
     </div>
