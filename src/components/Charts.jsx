@@ -171,6 +171,55 @@ function Charts({ tickets }) {
     });
   };
 
+  // Chart 4: Epic vs Story Points
+  const epicStoryPointsData = () => {
+    const epics = {};
+
+    tickets.forEach(ticket => {
+      const epicName = getEpicName(ticket);
+      const points = getStoryPointValue(ticket);
+
+      if (!epics[epicName]) {
+        epics[epicName] = {
+          storyPoints: 0,
+          ticketCount: 0
+        };
+      }
+
+      epics[epicName].storyPoints += points;
+      epics[epicName].ticketCount++;
+    });
+
+    return Object.entries(epics)
+      .map(([name, data]) => ({
+        epic: name.length > 30 ? name.substring(0, 30) + '...' : name,
+        storyPoints: data.storyPoints
+      }))
+      .sort((a, b) => b.storyPoints - a.storyPoints);
+  };
+
+  // Chart 5: Epic vs Ticket Count
+  const epicTicketCountData = () => {
+    const epics = {};
+
+    tickets.forEach(ticket => {
+      const epicName = getEpicName(ticket);
+
+      if (!epics[epicName]) {
+        epics[epicName] = 0;
+      }
+
+      epics[epicName]++;
+    });
+
+    return Object.entries(epics)
+      .map(([name, count]) => ({
+        epic: name.length > 30 ? name.substring(0, 30) + '...' : name,
+        tickets: count
+      }))
+      .sort((a, b) => b.tickets - a.tickets);
+  };
+
   const getResourceTableData = () => {
     return tickets
       .filter(ticket => {
@@ -305,6 +354,52 @@ function Charts({ tickets }) {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h3>Epic vs Story Points</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={epicStoryPointsData()}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="epic" 
+                angle={-45} 
+                textAnchor="end" 
+                height={120}
+                interval={0}
+              />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="storyPoints" fill="#00875a" name="Story Points" />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="chart-inference">
+            <strong>What to Infer?</strong> Identify which epics have the most story points allocated. This helps prioritize epic-level work and understand where the team's effort is concentrated.
+          </div>
+        </div>
+
+        <div className="chart-card">
+          <h3>Epic vs Ticket Count</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={epicTicketCountData()}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="epic" 
+                angle={-45} 
+                textAnchor="end" 
+                height={120}
+                interval={0}
+              />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="tickets" fill="#0052cc" name="Number of Tickets" />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="chart-inference">
+            <strong>What to Infer?</strong> Shows ticket distribution across epics. High ticket count with low story points (from previous chart) may indicate many small tasks or missing estimates.
           </div>
         </div>
       </div>
