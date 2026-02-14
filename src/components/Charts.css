@@ -97,3 +97,97 @@
     padding: 0.5rem;
   }
 }
+
+.resource-table-container {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px solid #dfe1e6;
+}
+
+.resource-table-container h4 {
+  font-size: 1rem;
+  color: #172b4d;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.resource-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 0.875rem;
+}
+
+.resource-table thead {
+  background: #f4f5f7;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.resource-table th {
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: #172b4d;
+  border-bottom: 2px solid #dfe1e6;
+  white-space: nowrap;
+}
+
+.resource-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #f4f5f7;
+  color: #5e6c84;
+}
+
+.resource-table tbody tr:hover {
+  background: #f4f5f7;
+}
+
+.resource-table .ticket-link {
+  color: #0052cc;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.resource-table .ticket-link:hover {
+  text-decoration: underline;
+}
+
+.resource-table .description-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resource-table .points-cell {
+  text-align: center;
+  font-weight: 600;
+  color: #0052cc;
+}
+
+@media (max-width: 768px) {
+  .resource-table-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+  }
+
+  .resource-table {
+    font-size: 0.75rem;
+  }
+
+  .resource-table th,
+  .resource-table td {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .resource-table .description-cell {
+    max-width: 150px;
+  }
+}

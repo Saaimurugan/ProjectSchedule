@@ -152,6 +152,42 @@ function Charts({ tickets }) {
       .sort((a, b) => b.totalPoints - a.totalPoints);
   };
 
+  const getEpicName = (ticket) => {
+    const fields = ticket.fields;
+    return fields.customfield_10014?.name || 
+           fields.customfield_10008?.name ||
+           fields.epic?.name ||
+           fields.parent?.fields?.summary ||
+           'No Epic';
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'No due date';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  const getResourceTableData = () => {
+    return tickets
+      .filter(ticket => {
+        const status = ticket.fields.status?.name?.toLowerCase() || '';
+        return status.includes('in progress');
+      })
+      .map(ticket => ({
+        resource: ticket.fields.assignee?.displayName || 'Unassigned',
+        ticketId: ticket.key,
+        epic: getEpicName(ticket),
+        description: ticket.fields.summary,
+        dueDate: formatDate(ticket.fields.duedate),
+        storyPoints: getStoryPointValue(ticket)
+      }))
+      .sort((a, b) => a.resource.localeCompare(b.resource));
+  };
+
   const COLORS = ['#0052cc', '#00875a', '#ff991f', '#bf2600', '#6554c0', '#00b8d9'];
 
   return (
@@ -222,6 +258,53 @@ function Charts({ tickets }) {
           </ResponsiveContainer>
           <div className="chart-inference">
             <strong>What to Infer?</strong> Compare team member workload and completion rates. Green bars show progress vs total (blue). Compare against target (orange) to identify over/under allocation. High ticket count with low points may indicate task fragmentation.
+          </div>
+
+          <div className="resource-table-container">
+            <h4>In Progress Tickets by Resource</h4>
+            <div className="table-wrapper">
+              <table className="resource-table">
+                <thead>
+                  <tr>
+                    <th>Resource</th>
+                    <th>Ticket ID</th>
+                    <th>Epic</th>
+                    <th>Description</th>
+                    <th>Due Date</th>
+                    <th>Story Points</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getResourceTableData().length > 0 ? (
+                    getResourceTableData().map((row, index) => (
+                      <tr key={index}>
+                        <td>{row.resource}</td>
+                        <td>
+                          <a 
+                            href={`https://highwirepress.atlassian.net/browse/${row.ticketId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ticket-link"
+                          >
+                            {row.ticketId}
+                          </a>
+                        </td>
+                        <td>{row.epic}</td>
+                        <td className="description-cell">{row.description}</td>
+                        <td>{row.dueDate}</td>
+                        <td className="points-cell">{row.storyPoints || '-'}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#5e6c84' }}>
+                        No tickets in progress
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
