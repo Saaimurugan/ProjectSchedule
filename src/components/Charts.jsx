@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Line, ComposedChart } from 'recharts';
 import './Charts.css';
 
 function Charts({ tickets }) {
@@ -162,7 +162,7 @@ function Charts({ tickets }) {
         <div className="chart-card">
           <h3>Story Points Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={storyPointsData()}>
+            <ComposedChart data={storyPointsData()}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="range" />
               <YAxis yAxisId="left" orientation="left" stroke="#0052cc" />
@@ -171,8 +171,12 @@ function Charts({ tickets }) {
               <Legend />
               <Bar yAxisId="left" dataKey="tickets" fill="#0052cc" name="Number of Tickets" />
               <Bar yAxisId="right" dataKey="storyPoints" fill="#00875a" name="Story Points" />
-            </BarChart>
+              <Line yAxisId="right" type="monotone" dataKey="storyPoints" stroke="#bf2600" strokeWidth={2} name="Trend" dot={{ fill: '#bf2600', r: 4 }} />
+            </ComposedChart>
           </ResponsiveContainer>
+          <div className="chart-inference">
+            <strong>What to Infer?</strong> Check if tickets are properly sized. High concentration in 0 points suggests missing estimates. Balanced distribution across ranges indicates healthy sprint planning.
+          </div>
         </div>
 
         <div className="chart-card">
@@ -189,6 +193,9 @@ function Charts({ tickets }) {
               <Bar yAxisId="right" dataKey="storyPoints" fill="#ff991f" name="Story Points" />
             </BarChart>
           </ResponsiveContainer>
+          <div className="chart-inference">
+            <strong>What to Infer?</strong> Monitor overdue tickets and workload timing. High overdue counts indicate capacity issues or blockers. Balanced future distribution suggests good sprint planning.
+          </div>
         </div>
 
         <div className="chart-card full-width">
@@ -213,6 +220,9 @@ function Charts({ tickets }) {
               <Bar yAxisId="right" dataKey="tickets" fill="#6554c0" name="Number of Tickets" />
             </BarChart>
           </ResponsiveContainer>
+          <div className="chart-inference">
+            <strong>What to Infer?</strong> Compare team member workload and completion rates. Green bars show progress vs total (blue). Compare against target (orange) to identify over/under allocation. High ticket count with low points may indicate task fragmentation.
+          </div>
         </div>
       </div>
     </div>
