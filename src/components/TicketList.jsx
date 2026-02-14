@@ -59,46 +59,56 @@ function TicketList({ tickets, groupBy = 'date' }) {
     return groups;
   };
 
-  const renderTicket = (ticket) => (
-    <div key={ticket.id} className="ticket-item">
-      <div className="ticket-header">
-        <span className="ticket-key">{ticket.key}</span>
-        <span className="ticket-type">{ticket.fields.issuetype?.name || 'N/A'}</span>
-      </div>
-      
-      <div className="ticket-summary">{ticket.fields.summary}</div>
-      
-      <div className="ticket-meta">
-        <div className="ticket-meta-item">
-          <span className="ticket-meta-label">Project:</span>
-          <span>{ticket.fields.project?.name || 'N/A'}</span>
+  const renderTicket = (ticket) => {
+    const ticketUrl = `https://highwirepress.atlassian.net/browse/${ticket.key}`;
+    
+    return (
+      <a 
+        key={ticket.id} 
+        href={ticketUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="ticket-item"
+      >
+        <div className="ticket-header">
+          <span className="ticket-key">{ticket.key}</span>
+          <span className="ticket-type">{ticket.fields.issuetype?.name || 'N/A'}</span>
         </div>
         
-        <div className="ticket-meta-item">
-          <span className="ticket-meta-label">Due Date:</span>
-          <span>{formatDate(ticket.fields.duedate)}</span>
-        </div>
+        <div className="ticket-summary">{ticket.fields.summary}</div>
         
-        <div className="ticket-meta-item">
-          <span className="ticket-meta-label">Status:</span>
-          <span>{ticket.fields.status?.name || 'N/A'}</span>
-        </div>
+        <div className="ticket-meta">
+          <div className="ticket-meta-item">
+            <span className="ticket-meta-label">Project:</span>
+            <span>{ticket.fields.project?.name || 'N/A'}</span>
+          </div>
+          
+          <div className="ticket-meta-item">
+            <span className="ticket-meta-label">Due Date:</span>
+            <span>{formatDate(ticket.fields.duedate)}</span>
+          </div>
+          
+          <div className="ticket-meta-item">
+            <span className="ticket-meta-label">Status:</span>
+            <span>{ticket.fields.status?.name || 'N/A'}</span>
+          </div>
 
-        <div className="ticket-meta-item">
-          <span className="ticket-meta-label">Assignee:</span>
-          <span>{ticket.fields.assignee?.displayName || 'Unassigned'}</span>
+          <div className="ticket-meta-item">
+            <span className="ticket-meta-label">Assignee:</span>
+            <span>{ticket.fields.assignee?.displayName || 'Unassigned'}</span>
+          </div>
         </div>
-      </div>
-      
-      {ticket.fields.description && (
-        <div className="ticket-description">
-          {typeof ticket.fields.description === 'string' 
-            ? ticket.fields.description 
-            : ticket.fields.description?.content?.[0]?.content?.[0]?.text || 'No description'}
-        </div>
-      )}
-    </div>
-  );
+        
+        {ticket.fields.description && (
+          <div className="ticket-description">
+            {typeof ticket.fields.description === 'string' 
+              ? ticket.fields.description 
+              : ticket.fields.description?.content?.[0]?.content?.[0]?.text || 'No description'}
+          </div>
+        )}
+      </a>
+    );
+  };
 
   if (groupBy === 'status') {
     const groupedTickets = groupTicketsByStatus();

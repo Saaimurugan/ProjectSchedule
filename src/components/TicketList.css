@@ -76,8 +76,18 @@
 }
 
 .ticket-item {
+  display: block;
   border-bottom: 1px solid rgba(0,0,0,0.08);
-  padding: 1rem 0;
+  padding: 1rem;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-radius: 4px;
+}
+
+.ticket-item:hover {
+  background-color: rgba(0, 82, 204, 0.05);
 }
 
 .ticket-item:last-child {
