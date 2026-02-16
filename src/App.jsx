@@ -14,6 +14,7 @@ function App() {
   const [error, setError] = useState(null);
   const [config, setConfig] = useState(null);
   const [currentSprintData, setCurrentSprintData] = useState(null);
+  const [sprintHistory, setSprintHistory] = useState([]);
   const [activeFilter, setActiveFilter] = useState({
     storyPoints: null,
     dueDate: null,
@@ -84,6 +85,12 @@ function App() {
         epics: [],
         statuses: []
       });
+      
+      // Store sprint history if included in response
+      if (parsedData.sprintHistory) {
+        console.log('Sprint history received:', parsedData.sprintHistory.length, 'sprints');
+        setSprintHistory(parsedData.sprintHistory);
+      }
       
       // Store story points field ID for later use
       if (parsedData.storyPointsFieldId) {
@@ -373,7 +380,7 @@ function App() {
           <>
             <Analytics tickets={filteredTickets} />
             <Charts tickets={filteredTickets} />
-            <SprintTrends currentSprintData={currentSprintData} />
+            <SprintTrends currentSprintData={currentSprintData} sprintHistory={sprintHistory} />
             <FilterCards 
               tickets={tickets}
               filteredTickets={filteredTickets}

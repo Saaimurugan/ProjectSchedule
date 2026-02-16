@@ -2,17 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar } from 'recharts';
 import './SprintTrends.css';
 
-function SprintTrends({ currentSprintData }) {
+function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
   const [sprintHistory, setSprintHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
-  // API Gateway endpoint - update this with your actual endpoint
+  // API Gateway endpoint - only used as fallback
   const API_ENDPOINT = 'https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev';
 
+  // Use sprint history from props if available, otherwise fetch
   useEffect(() => {
-    fetchSprintHistory();
-  }, []);
+    if (sprintHistoryProp && sprintHistoryProp.length > 0) {
+      console.log('Using sprint history from props:', sprintHistoryProp.length, 'sprints');
+      const sortedData = sprintHistoryProp.sort((a, b) => 
+        new Date(a.timestamp) - new Date(b.timestamp)
+      );
+      setSprintHistory(sortedData);
+    } else {
+      console.log('No sprint history in props, fetching from API...');
+      fetchSprintHistory();
+    }
+  }, [sprintHistoryProp]);
 
   const fetchSprintHistory = async () => {
     try {
