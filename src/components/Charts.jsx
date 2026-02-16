@@ -147,7 +147,8 @@ function Charts({ tickets }) {
         completedPoints: data.completed,
         tickets: data.tickets,
         target: targetPerResource,
-        productivity: data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0
+        productivity: data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0,
+        isBelowTarget: data.total < targetPerResource
       }))
       .sort((a, b) => b.totalPoints - a.totalPoints);
   };
@@ -221,7 +222,17 @@ function Charts({ tickets }) {
   };
 
   const getResourceTableData = () => {
-    return tickets
+    // Get all unique assignees from all tickets
+    const allAssignees = new Set();
+    tickets.forEach(ticket => {
+      const assignee = ticket.fields.assignee?.displayName;
+      if (assignee) {
+        allAssignees.add(assignee);
+      }
+    });
+
+    // Get tickets in progress
+    const inProgressTickets = tickets
       .filter(ticket => {
         const status = ticket.fields.status?.name?.toLowerCase() || '';
         return status.includes('in progress');
@@ -232,9 +243,33 @@ function Charts({ tickets }) {
         epic: getEpicName(ticket),
         description: ticket.fields.summary,
         dueDate: formatDate(ticket.fields.duedate),
-        storyPoints: getStoryPointValue(ticket)
-      }))
-      .sort((a, b) => a.resource.localeCompare(b.resource));
+        storyPoints: getStoryPointValue(ticket),
+        hasTickets: true
+      }));
+
+    // Find assignees with no in-progress tickets
+    const assigneesWithTickets = new Set(inProgressTickets.map(t => t.resource));
+    const assigneesWithoutTickets = Array.from(allAssignees)
+      .filter(assignee => !assigneesWithTickets.has(assignee))
+      .map(assignee => ({
+        resource: assignee,
+        ticketId: '-',
+        epic: '-',
+        description: 'No tickets in progress',
+        dueDate: '-',
+        storyPoints: '-',
+        hasTickets: false
+      }));
+
+    // Combine and sort
+    return [...inProgressTickets, ...assigneesWithoutTickets]
+      .sort((a, b) => {
+        // Sort by hasTickets first (true before false), then by resource name
+        if (a.hasTickets !== b.hasTickets) {
+          return b.hasTickets ? 1 : -1;
+        }
+        return a.resource.localeCompare(b.resource);
+      });
   };
 
   const COLORS = ['#0052cc', '#00875a', '#ff991f', '#bf2600', '#6554c0', '#00b8d9'];
@@ -299,14 +334,24 @@ function Charts({ tickets }) {
               <YAxis yAxisId="right" orientation="right" stroke="#6554c0" />
               <Tooltip />
               <Legend />
-              <Bar yAxisId="left" dataKey="totalPoints" fill="#0052cc" name="Total Story Points" />
+              <Bar 
+                yAxisId="left" 
+                dataKey="totalPoints" 
+                name="Total Story Points"
+                shape={(props) => {
+                  const { fill, x, y, width, height, payload } = props;
+                  const finalFill = payload.isBelowTarget ? '#bf2600' : fill;
+                  return <rect x={x} y={y} width={width} height={height} fill={finalFill} />;
+                }}
+                fill="#0052cc"
+              />
               <Bar yAxisId="left" dataKey="completedPoints" fill="#00875a" name="Completed Points" />
               <Bar yAxisId="left" dataKey="target" fill="#ff991f" name="Target (14 days × 3 pts/day)" />
               <Bar yAxisId="right" dataKey="tickets" fill="#6554c0" name="Number of Tickets" />
             </BarChart>
           </ResponsiveContainer>
           <div className="chart-inference">
-            <strong>What to Infer?</strong> Compare team member workload and completion rates. Green bars show progress vs total (blue). Compare against target (orange) to identify over/under allocation. High ticket count with low points may indicate task fragmentation.
+            <strong>What to Infer?</strong> Compare team member workload and completion rates. Green bars show progress vs total (blue/red). Red bars indicate users below target capacity. Compare against target (orange) to identify over/under allocation. High ticket count with low points may indicate task fragmentation.
           </div>
 
           <div className="resource-table-container">
@@ -326,28 +371,32 @@ function Charts({ tickets }) {
                 <tbody>
                   {getResourceTableData().length > 0 ? (
                     getResourceTableData().map((row, index) => (
-                      <tr key={index}>
+                      <tr key={index} className={!row.hasTickets ? 'no-tickets-row' : ''}>
                         <td>{row.resource}</td>
                         <td>
-                          <a 
-                            href={`https://highwirepress.atlassian.net/browse/${row.ticketId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ticket-link"
-                          >
-                            {row.ticketId}
-                          </a>
+                          {row.ticketId !== '-' ? (
+                            <a 
+                              href={`https://highwirepress.atlassian.net/browse/${row.ticketId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ticket-link"
+                            >
+                              {row.ticketId}
+                            </a>
+                          ) : (
+                            row.ticketId
+                          )}
                         </td>
                         <td>{row.epic}</td>
                         <td className="description-cell">{row.description}</td>
                         <td>{row.dueDate}</td>
-                        <td className="points-cell">{row.storyPoints || '-'}</td>
+                        <td className="points-cell">{row.storyPoints}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
                       <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#5e6c84' }}>
-                        No tickets in progress
+                        No resources found
                       </td>
                     </tr>
                   )}
@@ -357,7 +406,7 @@ function Charts({ tickets }) {
           </div>
         </div>
 
-        <div className="chart-card">
+        <div className="chart-card full-width">
           <h3>Epic vs Story Points</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={epicStoryPointsData()}>
@@ -380,7 +429,7 @@ function Charts({ tickets }) {
           </div>
         </div>
 
-        <div className="chart-card">
+        <div className="chart-card full-width">
           <h3>Epic vs Ticket Count</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={epicTicketCountData()}>

@@ -149,6 +149,19 @@
   background: #f4f5f7;
 }
 
+.resource-table tbody tr.no-tickets-row {
+  background-color: #ffebe6;
+}
+
+.resource-table tbody tr.no-tickets-row:hover {
+  background-color: #ffccc7;
+}
+
+.resource-table tbody tr.no-tickets-row td {
+  color: #bf2600;
+  font-weight: 500;
+}
+
 .resource-table .ticket-link {
   color: #0052cc;
   text-decoration: none;
