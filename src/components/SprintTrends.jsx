@@ -6,7 +6,6 @@ function SprintTrends({ currentSprintData }) {
   const [sprintHistory, setSprintHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [savedToday, setSavedToday] = useState(false);
   
   // API Gateway endpoint - update this with your actual endpoint
   const API_ENDPOINT = 'https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev';
@@ -27,54 +26,12 @@ function SprintTrends({ currentSprintData }) {
           new Date(a.timestamp) - new Date(b.timestamp)
         );
         setSprintHistory(sortedData);
-        
-        // Check if data was saved today
-        const today = new Date().toISOString().split('T')[0];
-        const savedTodayExists = sortedData.some(sprint => sprint.date === today);
-        setSavedToday(savedTodayExists);
       } else {
         setError(result.error);
       }
     } catch (err) {
       console.error('Error fetching sprint history:', err);
       setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const saveCurrentSprint = async () => {
-    if (!currentSprintData) {
-      alert('No sprint data available to save');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_ENDPOINT}/sprint-data`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(currentSprintData)
-      });
-
-      const result = await response.json();
-      
-      if (response.status === 409) {
-        // Data already saved today
-        alert('Sprint data has already been saved today. Only one save per day is allowed.');
-        setSavedToday(true);
-      } else if (result.success) {
-        alert(`Sprint data saved successfully for ${result.date}!`);
-        setSavedToday(true);
-        fetchSprintHistory(); // Refresh the history
-      } else {
-        alert(`Error: ${result.error || result.message}`);
-      }
-    } catch (err) {
-      console.error('Error saving sprint data:', err);
-      alert(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -101,18 +58,8 @@ function SprintTrends({ currentSprintData }) {
     <div className="sprint-trends">
       <div className="sprint-trends-header">
         <h2>Sprint Trends (Last 10 Sprints)</h2>
-        <div className="header-actions">
-          {savedToday && (
-            <span className="saved-today-badge">✓ Saved Today</span>
-          )}
-          <button 
-            className="save-sprint-btn"
-            onClick={saveCurrentSprint}
-            disabled={loading || !currentSprintData || savedToday}
-            title={savedToday ? 'Data already saved for today' : 'Save current sprint data'}
-          >
-            {loading ? 'Saving...' : savedToday ? 'Already Saved Today' : 'Save Current Sprint'}
-          </button>
+        <div className="header-info">
+          <span className="info-badge">Auto-saved daily when tickets are loaded</span>
         </div>
       </div>
 

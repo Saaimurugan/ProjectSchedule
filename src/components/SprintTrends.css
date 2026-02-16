@@ -20,19 +20,19 @@
   margin: 0;
 }
 
-.header-actions {
+.header-info {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.saved-today-badge {
+.info-badge {
   background: #e3fcef;
   color: #00875a;
   padding: 0.5rem 1rem;
   border-radius: 4px;
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   border: 1px solid #00875a;
 }
 
@@ -46,6 +46,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
+  display: none; /* Hidden since auto-save is enabled */
 }
 
 .save-sprint-btn:hover:not(:disabled) {
@@ -137,18 +138,14 @@
     gap: 1rem;
   }
 
-  .header-actions {
+  .header-info {
     width: 100%;
-    flex-direction: column;
   }
 
-  .saved-today-badge {
+  .info-badge {
     width: 100%;
     text-align: center;
-  }
-
-  .save-sprint-btn {
-    width: 100%;
+    font-size: 0.8rem;
   }
 
   .trend-card {
