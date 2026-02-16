@@ -1,0 +1,215 @@
+import React, { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar } from 'recharts';
+import './SprintTrends.css';
+
+function SprintTrends({ currentSprintData }) {
+  const [sprintHistory, setSprintHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [savedToday, setSavedToday] = useState(false);
+  
+  // API Gateway endpoint - update this with your actual endpoint
+  const API_ENDPOINT = 'https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev';
+
+  useEffect(() => {
+    fetchSprintHistory();
+  }, []);
+
+  const fetchSprintHistory = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_ENDPOINT}/sprint-history?limit=10`);
+      const result = await response.json();
+      
+      if (result.success) {
+        // Sort by timestamp ascending for chart display
+        const sortedData = result.data.sort((a, b) => 
+          new Date(a.timestamp) - new Date(b.timestamp)
+        );
+        setSprintHistory(sortedData);
+        
+        // Check if data was saved today
+        const today = new Date().toISOString().split('T')[0];
+        const savedTodayExists = sortedData.some(sprint => sprint.date === today);
+        setSavedToday(savedTodayExists);
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      console.error('Error fetching sprint history:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveCurrentSprint = async () => {
+    if (!currentSprintData) {
+      alert('No sprint data available to save');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_ENDPOINT}/sprint-data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(currentSprintData)
+      });
+
+      const result = await response.json();
+      
+      if (response.status === 409) {
+        // Data already saved today
+        alert('Sprint data has already been saved today. Only one save per day is allowed.');
+        setSavedToday(true);
+      } else if (result.success) {
+        alert(`Sprint data saved successfully for ${result.date}!`);
+        setSavedToday(true);
+        fetchSprintHistory(); // Refresh the history
+      } else {
+        alert(`Error: ${result.error || result.message}`);
+      }
+    } catch (err) {
+      console.error('Error saving sprint data:', err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatChartData = () => {
+    return sprintHistory.map(sprint => ({
+      name: sprint.sprintName || sprint.sprintId,
+      productivity: sprint.productivity || 0,
+      velocity: sprint.velocity || 0,
+      bugs: sprint.bugCount || 0,
+      completedBugs: sprint.completedBugCount || 0,
+      completionRate: sprint.totalStoryPoints > 0 
+        ? ((sprint.completedStoryPoints / sprint.totalStoryPoints) * 100).toFixed(1)
+        : 0
+    }));
+  };
+
+  if (loading && sprintHistory.length === 0) {
+    return <div className="sprint-trends loading">Loading sprint history...</div>;
+  }
+
+  return (
+    <div className="sprint-trends">
+      <div className="sprint-trends-header">
+        <h2>Sprint Trends (Last 10 Sprints)</h2>
+        <div className="header-actions">
+          {savedToday && (
+            <span className="saved-today-badge">✓ Saved Today</span>
+          )}
+          <button 
+            className="save-sprint-btn"
+            onClick={saveCurrentSprint}
+            disabled={loading || !currentSprintData || savedToday}
+            title={savedToday ? 'Data already saved for today' : 'Save current sprint data'}
+          >
+            {loading ? 'Saving...' : savedToday ? 'Already Saved Today' : 'Save Current Sprint'}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="error-message">
+          Error: {error}. Make sure the Lambda function is deployed and DynamoDB is configured.
+        </div>
+      )}
+
+      {sprintHistory.length === 0 && !loading && (
+        <div className="no-data-message">
+          No sprint history available. Save the current sprint to start tracking trends.
+        </div>
+      )}
+
+      {sprintHistory.length > 0 && (
+        <div className="trends-grid">
+          <div className="trend-card full-width">
+            <h3>Velocity & Completion Rate Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={formatChartData()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                <YAxis yAxisId="left" orientation="left" stroke="#0052cc" />
+                <YAxis yAxisId="right" orientation="right" stroke="#00875a" />
+                <Tooltip />
+                <Legend />
+                <Bar yAxisId="left" dataKey="velocity" fill="#0052cc" name="Velocity (Story Points)" />
+                <Line 
+                  yAxisId="right" 
+                  type="monotone" 
+                  dataKey="completionRate" 
+                  stroke="#00875a" 
+                  strokeWidth={3}
+                  name="Completion Rate (%)"
+                  dot={{ fill: '#00875a', r: 5 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="chart-inference">
+              <strong>What to Infer?</strong> Track team velocity (completed story points) and completion rate over time. Consistent or increasing velocity indicates stable team performance. Completion rate shows planning accuracy.
+            </div>
+          </div>
+
+          <div className="trend-card full-width">
+            <h3>Bug Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={formatChartData()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="bugs" fill="#bf2600" name="Total Bugs" />
+                <Bar dataKey="completedBugs" fill="#00875a" name="Completed Bugs" />
+                <Line 
+                  type="monotone" 
+                  dataKey="bugs" 
+                  stroke="#bf2600" 
+                  strokeWidth={2}
+                  name="Bug Trend"
+                  dot={{ fill: '#bf2600', r: 4 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="chart-inference">
+              <strong>What to Infer?</strong> Monitor bug creation and resolution trends. Increasing bug count may indicate quality issues. Green bars show bug resolution effectiveness.
+            </div>
+          </div>
+
+          <div className="trend-card full-width">
+            <h3>Team Productivity Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={formatChartData()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="productivity" 
+                  stroke="#6554c0" 
+                  strokeWidth={3}
+                  name="Productivity (%)"
+                  dot={{ fill: '#6554c0', r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="chart-inference">
+              <strong>What to Infer?</strong> Overall team productivity percentage over sprints. Consistent high productivity indicates effective sprint planning and execution.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default SprintTrends;

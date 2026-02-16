@@ -4,6 +4,7 @@ import FilterCards from './components/FilterCards';
 import Analytics from './components/Analytics';
 import Charts from './components/Charts';
 import TicketList from './components/TicketList';
+import SprintTrends from './components/SprintTrends';
 import './App.css';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [config, setConfig] = useState(null);
+  const [currentSprintData, setCurrentSprintData] = useState(null);
   const [activeFilter, setActiveFilter] = useState({
     storyPoints: null,
     dueDate: null,
@@ -93,6 +95,139 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Calculate current sprint data whenever tickets change
+  useEffect(() => {
+    if (tickets.length > 0) {
+      const sprintData = calculateSprintData(tickets);
+      setCurrentSprintData(sprintData);
+    }
+  }, [tickets]);
+
+  const getStoryPointValue = (ticket) => {
+    const fields = ticket.fields;
+    const fieldsToCheck = [
+      'customfield_10058',
+      'customfield_10202',
+      'customfield_10005',
+      'customfield_10308',
+      'customfield_10016',
+      'customfield_10026',
+      'customfield_10036',
+      'customfield_10106',
+      'customfield_10002',
+      'customfield_10004',
+      'storyPoints'
+    ];
+    
+    for (const fieldName of fieldsToCheck) {
+      if (fields[fieldName] !== null && fields[fieldName] !== undefined) {
+        const value = Number(fields[fieldName]);
+        if (!isNaN(value)) {
+          return value;
+        }
+      }
+    }
+    return 0;
+  };
+
+  const getEpicName = (ticket) => {
+    const fields = ticket.fields;
+    return fields.customfield_10014?.name || 
+           fields.customfield_10008?.name ||
+           fields.epic?.name ||
+           fields.parent?.fields?.summary ||
+           'No Epic';
+  };
+
+  const calculateSprintData = (ticketList) => {
+    let totalStoryPoints = 0;
+    let completedStoryPoints = 0;
+    let bugCount = 0;
+    let completedBugCount = 0;
+    let overdueTickets = 0;
+    const uniqueAssignees = new Set();
+    const ticketDetails = [];
+
+    ticketList.forEach(ticket => {
+      const points = getStoryPointValue(ticket);
+      const status = ticket.fields.status?.name?.toLowerCase() || '';
+      const isCompleted = status.includes('done') || status.includes('complete');
+      const issueType = ticket.fields.issuetype?.name?.toLowerCase() || '';
+      const isBug = issueType.includes('bug');
+      const assignee = ticket.fields.assignee?.displayName || 'Unassigned';
+      const epic = getEpicName(ticket);
+      const dueDate = ticket.fields.duedate || null;
+
+      if (assignee !== 'Unassigned') {
+        uniqueAssignees.add(assignee);
+      }
+
+      totalStoryPoints += points;
+      
+      if (isCompleted) {
+        completedStoryPoints += points;
+      }
+
+      if (isBug) {
+        bugCount++;
+        if (isCompleted) {
+          completedBugCount++;
+        }
+      }
+
+      // Check if overdue
+      if (dueDate) {
+        const dueDateObj = new Date(dueDate);
+        dueDateObj.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (dueDateObj < today && !isCompleted) {
+          overdueTickets++;
+        }
+      }
+
+      // Add ticket details for storage
+      ticketDetails.push({
+        ticketId: ticket.key,
+        resourceName: assignee,
+        storyPoints: points,
+        storyPointsCompleted: isCompleted ? points : 0,
+        epic: epic,
+        date: dueDate,
+        status: ticket.fields.status?.name || 'Unknown',
+        issueType: ticket.fields.issuetype?.name || 'Unknown',
+        summary: ticket.fields.summary || '',
+        isCompleted: isCompleted,
+        isBug: isBug
+      });
+    });
+
+    const productivity = totalStoryPoints > 0 
+      ? ((completedStoryPoints / totalStoryPoints) * 100).toFixed(1)
+      : 0;
+
+    return {
+      sprintId: `sprint-${Date.now()}`,
+      sprintName: config?.sprintName || `Sprint ${new Date().toISOString().split('T')[0]}`,
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      totalStoryPoints,
+      completedStoryPoints,
+      velocity: completedStoryPoints,
+      bugCount,
+      completedBugCount,
+      resourceCount: uniqueAssignees.size,
+      totalTickets: ticketList.length,
+      completedTickets: ticketList.filter(t => {
+        const status = t.fields.status?.name?.toLowerCase() || '';
+        return status.includes('done') || status.includes('complete');
+      }).length,
+      productivity: parseFloat(productivity),
+      overdueTickets,
+      ticketDetails: ticketDetails
+    };
   };
 
   const handleFilterChange = (filter) => {
@@ -238,6 +373,7 @@ function App() {
           <>
             <Analytics tickets={filteredTickets} />
             <Charts tickets={filteredTickets} />
+            <SprintTrends currentSprintData={currentSprintData} />
             <FilterCards 
               tickets={tickets}
               filteredTickets={filteredTickets}

@@ -1,0 +1,162 @@
+.sprint-trends {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.sprint-trends-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.sprint-trends-header h2 {
+  font-size: 1.25rem;
+  color: #172b4d;
+  margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.saved-today-badge {
+  background: #e3fcef;
+  color: #00875a;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid #00875a;
+}
+
+.save-sprint-btn {
+  background: #0052cc;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.save-sprint-btn:hover:not(:disabled) {
+  background: #0747a6;
+}
+
+.save-sprint-btn:disabled {
+  background: #dfe1e6;
+  color: #5e6c84;
+  cursor: not-allowed;
+}
+
+.sprint-trends.loading {
+  text-align: center;
+  padding: 3rem;
+  color: #5e6c84;
+  font-size: 1rem;
+}
+
+.error-message {
+  background: #ffebe6;
+  border-left: 3px solid #bf2600;
+  color: #bf2600;
+  padding: 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.no-data-message {
+  background: #f4f5f7;
+  border-left: 3px solid #5e6c84;
+  color: #5e6c84;
+  padding: 2rem;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.trends-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+.trend-card {
+  background: #f4f5f7;
+  border-radius: 6px;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.trend-card.full-width {
+  grid-column: span 1;
+}
+
+.trend-card h3 {
+  font-size: 1rem;
+  color: #172b4d;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.chart-inference {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #fff;
+  border-left: 3px solid #0052cc;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: #5e6c84;
+  line-height: 1.5;
+}
+
+.chart-inference strong {
+  color: #172b4d;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+@media (max-width: 768px) {
+  .sprint-trends {
+    padding: 1rem;
+  }
+
+  .sprint-trends-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .saved-today-badge {
+    width: 100%;
+    text-align: center;
+  }
+
+  .save-sprint-btn {
+    width: 100%;
+  }
+
+  .trend-card {
+    padding: 1rem;
+  }
+
+  .chart-inference {
+    font-size: 0.8rem;
+    padding: 0.5rem;
+  }
+}
