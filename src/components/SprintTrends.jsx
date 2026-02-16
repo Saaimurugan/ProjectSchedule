@@ -10,42 +10,19 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
   // API Gateway endpoint - only used as fallback
   const API_ENDPOINT = 'https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev';
 
-  // Use sprint history from props if available, otherwise fetch
+  // Use sprint history from props - no automatic fetching
   useEffect(() => {
     if (sprintHistoryProp && sprintHistoryProp.length > 0) {
       console.log('Using sprint history from props:', sprintHistoryProp.length, 'sprints');
-      const sortedData = sprintHistoryProp.sort((a, b) => 
+      const sortedData = [...sprintHistoryProp].sort((a, b) => 
         new Date(a.timestamp) - new Date(b.timestamp)
       );
       setSprintHistory(sortedData);
     } else {
-      console.log('No sprint history in props, fetching from API...');
-      fetchSprintHistory();
+      console.log('No sprint history available yet');
+      setSprintHistory([]);
     }
   }, [sprintHistoryProp]);
-
-  const fetchSprintHistory = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_ENDPOINT}/sprint-history?limit=10`);
-      const result = await response.json();
-      
-      if (result.success) {
-        // Sort by timestamp ascending for chart display
-        const sortedData = result.data.sort((a, b) => 
-          new Date(a.timestamp) - new Date(b.timestamp)
-        );
-        setSprintHistory(sortedData);
-      } else {
-        setError(result.error);
-      }
-    } catch (err) {
-      console.error('Error fetching sprint history:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatChartData = () => {
     return sprintHistory.map(sprint => ({
