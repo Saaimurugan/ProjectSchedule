@@ -71,7 +71,7 @@ function SprintTrends({ currentSprintData }) {
 
       {sprintHistory.length === 0 && !loading && (
         <div className="no-data-message">
-          No sprint history available. Save the current sprint to start tracking trends.
+          No sprint history available yet. Load JIRA tickets to automatically save sprint data and start tracking trends.
         </div>
       )}
 
