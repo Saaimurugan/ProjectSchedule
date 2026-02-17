@@ -6,21 +6,20 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
   const [sprintHistory, setSprintHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // API Gateway endpoint - only used as fallback
-  const API_ENDPOINT = 'https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev';
 
-  // Use sprint history from props - no automatic fetching
+  // Use sprint history from props
   useEffect(() => {
     if (sprintHistoryProp && sprintHistoryProp.length > 0) {
-      console.log('Using sprint history from props:', sprintHistoryProp.length, 'sprints');
+      console.log('Displaying sprint history:', sprintHistoryProp.length, 'sprints');
       const sortedData = [...sprintHistoryProp].sort((a, b) => 
         new Date(a.timestamp) - new Date(b.timestamp)
       );
       setSprintHistory(sortedData);
+      setLoading(false);
     } else {
-      console.log('No sprint history available yet');
+      console.log('No sprint history available');
       setSprintHistory([]);
+      setLoading(false);
     }
   }, [sprintHistoryProp]);
 

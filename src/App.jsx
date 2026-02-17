@@ -23,6 +23,42 @@ function App() {
     statuses: []
   });
 
+  // Fetch sprint history on page load
+  useEffect(() => {
+    fetchSprintHistory();
+  }, []);
+
+  const fetchSprintHistory = async () => {
+    try {
+      console.log('Fetching sprint history on page load...');
+      const response = await fetch('https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev/mps', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jql: '' }), // Empty JQL to get only sprint history
+      });
+
+      const rawText = await response.text();
+      let parsedData = JSON.parse(rawText);
+      
+      // Handle API Gateway response structure
+      if (parsedData.body && typeof parsedData.body === 'string') {
+        parsedData = JSON.parse(parsedData.body);
+      }
+      if (typeof parsedData === 'string') {
+        parsedData = JSON.parse(parsedData);
+      }
+      
+      if (parsedData.sprintHistory) {
+        console.log('Sprint history loaded:', parsedData.sprintHistory.length, 'sprints');
+        setSprintHistory(parsedData.sprintHistory);
+      }
+    } catch (err) {
+      console.error('Error fetching sprint history:', err);
+    }
+  };
+
   const fetchTickets = async (jiraConfig) => {
     setLoading(true);
     setError(null);
