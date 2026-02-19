@@ -682,7 +682,6 @@ function Charts({ tickets }) {
                       return null;
                     }}
                   />
-                  <Legend />
                   <Scatter 
                     name="Epics" 
                     data={resourcesPerEpicData()} 
