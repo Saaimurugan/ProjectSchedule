@@ -1,8 +1,10 @@
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Line, ComposedChart } from 'recharts';
+import React, { useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Line, ComposedChart, ScatterChart, Scatter, ZAxis } from 'recharts';
 import './Charts.css';
 
 function Charts({ tickets }) {
+  const [selectedEpic, setSelectedEpic] = useState(null);
+
   const getStoryPointValue = (ticket) => {
     const fields = ticket.fields;
     
@@ -221,6 +223,64 @@ function Charts({ tickets }) {
       .sort((a, b) => b.tickets - a.tickets);
   };
 
+  // Chart 6: Resources per Epic (Bubble Chart)
+  const resourcesPerEpicData = () => {
+    const epicResources = {};
+    const epicTickets = {};
+
+    tickets.forEach(ticket => {
+      const epicName = getEpicName(ticket);
+      const assignee = ticket.fields.assignee?.displayName;
+
+      // Count resources
+      if (!epicResources[epicName]) {
+        epicResources[epicName] = new Set();
+      }
+      if (assignee) {
+        epicResources[epicName].add(assignee);
+      }
+
+      // Count tickets
+      if (!epicTickets[epicName]) {
+        epicTickets[epicName] = 0;
+      }
+      epicTickets[epicName]++;
+    });
+
+    return Object.entries(epicResources)
+      .map(([name, resourceSet], index) => ({
+        name: name.length > 25 ? name.substring(0, 25) + '...' : name,
+        fullName: name,
+        x: index + 1,
+        y: resourceSet.size,
+        z: epicTickets[name] || 0
+      }))
+      .sort((a, b) => b.y - a.y);
+  };
+
+  // Get users for selected epic
+  const getUsersByEpic = (epicName) => {
+    const users = new Set();
+    
+    tickets.forEach(ticket => {
+      const ticketEpic = getEpicName(ticket);
+      const assignee = ticket.fields.assignee?.displayName;
+      
+      if (ticketEpic === epicName && assignee) {
+        users.add(assignee);
+      }
+    });
+    
+    return Array.from(users).sort();
+  };
+
+  // Handle bubble click
+  const handleBubbleClick = (data) => {
+    if (data && data.payload && data.payload.fullName) {
+      setSelectedEpic(data.payload.fullName);
+    }
+  };
+
   const getResourceTableData = () => {
     // Get all unique assignees from all tickets
     const allAssignees = new Set();
@@ -355,7 +415,7 @@ function Charts({ tickets }) {
         <div className="chart-card">
           <h3>Due Date Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={dueDateData()}>
+            <ComposedChart data={dueDateData()}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="status" />
               <YAxis yAxisId="left" orientation="left" stroke="#0052cc" />
@@ -364,7 +424,16 @@ function Charts({ tickets }) {
               <Legend />
               <Bar yAxisId="left" dataKey="tickets" fill="#0052cc" name="Number of Tickets" />
               <Bar yAxisId="right" dataKey="storyPoints" fill="#ff991f" name="Story Points" />
-            </BarChart>
+              <Line 
+                yAxisId="left" 
+                type="monotone" 
+                dataKey="tickets" 
+                stroke="#bf2600" 
+                strokeWidth={2}
+                name="Ticket Trend"
+                dot={{ fill: '#bf2600', r: 4 }}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
           <div className="chart-inference">
             <strong>What to Infer?</strong> Monitor overdue tickets and workload timing. High overdue counts indicate capacity issues or blockers. Balanced future distribution suggests good sprint planning.
@@ -539,6 +608,100 @@ function Charts({ tickets }) {
           </ResponsiveContainer>
           <div className="chart-inference">
             <strong>What to Infer?</strong> Shows ticket distribution across epics. High ticket count with low story points (from previous chart) may indicate many small tasks or missing estimates.
+          </div>
+        </div>
+
+        <div className="chart-card resources-epic-container">
+          <div className="resources-epic-content">
+            <div className="user-list-panel">
+              <h4>Resources by Epic</h4>
+              {selectedEpic ? (
+                <>
+                  <div className="selected-epic-header">
+                    <strong>{selectedEpic}</strong>
+                    <button 
+                      className="clear-selection-btn" 
+                      onClick={() => setSelectedEpic(null)}
+                      title="Clear selection"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <ul className="user-list">
+                    {getUsersByEpic(selectedEpic).map((user, index) => (
+                      <li key={index} className="user-item">{user}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <div className="no-selection">
+                  Click on an epic bar to see resources
+                </div>
+              )}
+            </div>
+            
+            <div className="chart-section">
+              <h3>Resources per Epic</h3>
+              <ResponsiveContainer width="100%" height={450}>
+                <ScatterChart margin={{ top: 20, right: 20, bottom: 100, left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    type="category" 
+                    dataKey="name" 
+                    name="Epic"
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    interval={0}
+                  />
+                  <YAxis 
+                    type="number" 
+                    dataKey="y" 
+                    name="Resources"
+                    label={{ value: 'Number of Resources', angle: -90, position: 'insideLeft' }}
+                  />
+                  <ZAxis 
+                    type="number" 
+                    dataKey="z" 
+                    range={[100, 1000]} 
+                    name="Tickets"
+                  />
+                  <Tooltip 
+                    cursor={{ strokeDasharray: '3 3' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="custom-tooltip">
+                            <p><strong>{data.fullName}</strong></p>
+                            <p>Resources: {data.y}</p>
+                            <p>Tickets: {data.z}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend />
+                  <Scatter 
+                    name="Epics" 
+                    data={resourcesPerEpicData()} 
+                    onClick={handleBubbleClick}
+                    cursor="pointer"
+                  >
+                    {resourcesPerEpicData().map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Scatter>
+                </ScatterChart>
+              </ResponsiveContainer>
+              <div className="chart-inference">
+                <strong>What to Infer?</strong> Bubble chart showing resources per epic. Y-axis shows number of resources, bubble size represents ticket count. Click on a bubble to see the list of resources. Helps identify epic ownership and resource distribution across initiatives.
+              </div>
+            </div>
           </div>
         </div>
       </div>

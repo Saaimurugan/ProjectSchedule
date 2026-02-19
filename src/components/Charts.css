@@ -212,3 +212,126 @@
     max-width: 150px;
   }
 }
+
+.resources-epic-container {
+  grid-column: span 2;
+}
+
+.resources-epic-content {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.user-list-panel {
+  flex: 0 0 250px;
+  background: white;
+  border-radius: 6px;
+  padding: 1rem;
+  border: 1px solid #dfe1e6;
+}
+
+.user-list-panel h4 {
+  font-size: 0.9rem;
+  color: #172b4d;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.selected-epic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: #e6f2ff;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: #0052cc;
+}
+
+.clear-selection-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #5e6c84;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.clear-selection-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.user-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.user-item {
+  padding: 0.5rem;
+  border-bottom: 1px solid #f4f5f7;
+  font-size: 0.85rem;
+  color: #172b4d;
+}
+
+.user-item:last-child {
+  border-bottom: none;
+}
+
+.user-item:hover {
+  background: #f4f5f7;
+}
+
+.no-selection {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #5e6c84;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.chart-section {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .resources-epic-content {
+    flex-direction: column;
+  }
+
+  .user-list-panel {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+}
+
+.custom-tooltip {
+  background: white;
+  border: 1px solid #dfe1e6;
+  border-radius: 4px;
+  padding: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.custom-tooltip p {
+  margin: 0.25rem 0;
+  font-size: 0.85rem;
+  color: #172b4d;
+}
+
+.custom-tooltip p:first-child {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f4f5f7;
+}
