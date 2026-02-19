@@ -247,6 +247,18 @@ function Charts({ tickets }) {
         hasTickets: true
       }));
 
+    // Count tickets per resource
+    const ticketCountByResource = {};
+    inProgressTickets.forEach(ticket => {
+      ticketCountByResource[ticket.resource] = (ticketCountByResource[ticket.resource] || 0) + 1;
+    });
+
+    // Add highlight flag for resources with 2+ tickets
+    const ticketsWithHighlight = inProgressTickets.map(ticket => ({
+      ...ticket,
+      shouldHighlight: ticketCountByResource[ticket.resource] >= 2
+    }));
+
     // Find assignees with no in-progress tickets
     const assigneesWithTickets = new Set(inProgressTickets.map(t => t.resource));
     const assigneesWithoutTickets = Array.from(allAssignees)
@@ -258,11 +270,12 @@ function Charts({ tickets }) {
         description: 'No tickets in progress',
         dueDate: '-',
         storyPoints: '-',
-        hasTickets: false
+        hasTickets: false,
+        shouldHighlight: false
       }));
 
     // Combine and sort
-    return [...inProgressTickets, ...assigneesWithoutTickets]
+    return [...ticketsWithHighlight, ...assigneesWithoutTickets]
       .sort((a, b) => {
         // Sort by hasTickets first (true before false), then by resource name
         if (a.hasTickets !== b.hasTickets) {
@@ -371,7 +384,10 @@ function Charts({ tickets }) {
                 <tbody>
                   {getResourceTableData().length > 0 ? (
                     getResourceTableData().map((row, index) => (
-                      <tr key={index} className={!row.hasTickets ? 'no-tickets-row' : ''}>
+                      <tr 
+                        key={index} 
+                        className={`${!row.hasTickets ? 'no-tickets-row' : ''} ${row.shouldHighlight ? 'highlight-row' : ''}`}
+                      >
                         <td>{row.resource}</td>
                         <td>
                           {row.ticketId !== '-' ? (

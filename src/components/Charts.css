@@ -162,6 +162,14 @@
   font-weight: 500;
 }
 
+.resource-table tbody tr.highlight-row {
+  background-color: #fff3cd;
+}
+
+.resource-table tbody tr.highlight-row:hover {
+  background-color: #ffe69c;
+}
+
 .resource-table .ticket-link {
   color: #0052cc;
   text-decoration: none;
