@@ -193,6 +193,11 @@
   color: #0052cc;
 }
 
+.resource-table .no-due-date {
+  color: #bf2600;
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   .resource-table-container {
     margin-top: 1rem;

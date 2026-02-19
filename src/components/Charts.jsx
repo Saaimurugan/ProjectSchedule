@@ -520,7 +520,9 @@ function Charts({ tickets }) {
                         </td>
                         <td>{row.epic}</td>
                         <td className="description-cell">{row.description}</td>
-                        <td>{row.dueDate}</td>
+                        <td className={row.dueDate === 'No due date' ? 'no-due-date' : ''}>
+                          {row.dueDate}
+                        </td>
                         <td className="points-cell">{row.storyPoints}</td>
                       </tr>
                     ))

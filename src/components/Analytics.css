@@ -13,6 +13,45 @@
   color: #172b4d;
 }
 
+.sprint-details-section {
+  background: #f4f5f7;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #0052cc;
+}
+
+.sprint-details-section h3 {
+  font-size: 1rem;
+  color: #172b4d;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.sprint-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.sprint-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  color: #5e6c84;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 1rem;
+  color: #172b4d;
+  font-weight: 600;
+}
+
 .analytics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

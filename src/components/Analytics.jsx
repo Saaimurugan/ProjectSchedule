@@ -50,6 +50,54 @@ function Analytics({ tickets }) {
     return 'future';
   };
 
+  const getEpicName = (ticket) => {
+    const fields = ticket.fields;
+    return fields.customfield_10014?.name || 
+           fields.customfield_10008?.name ||
+           fields.epic?.name ||
+           fields.parent?.fields?.summary ||
+           'No Epic';
+  };
+
+  const calculateSprintDetails = () => {
+    // Get unique resources
+    const uniqueResources = new Set();
+    tickets.forEach(ticket => {
+      const assignee = ticket.fields.assignee?.displayName;
+      if (assignee) {
+        uniqueResources.add(assignee);
+      }
+    });
+
+    // Get epic distribution
+    const epicCounts = {};
+    tickets.forEach(ticket => {
+      const epicName = getEpicName(ticket);
+      epicCounts[epicName] = (epicCounts[epicName] || 0) + 1;
+    });
+
+    // Find top epic
+    const sortedEpics = Object.entries(epicCounts).sort((a, b) => b[1] - a[1]);
+    const topEpic = sortedEpics.length > 0 ? sortedEpics[0] : ['None', 0];
+    const epicConcentration = sortedEpics.length > 0 
+      ? `${topEpic[0]} (${topEpic[1]} tickets, ${((topEpic[1] / tickets.length) * 100).toFixed(0)}%)`
+      : 'No epics';
+
+    // Calculate sprint dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sprintEndDate = new Date(today);
+    sprintEndDate.setDate(sprintEndDate.getDate() + 14);
+
+    return {
+      startDate: today.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      endDate: sprintEndDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+      totalResources: uniqueResources.size,
+      epicConcentration: epicConcentration,
+      totalEpics: sortedEpics.length
+    };
+  };
+
   const calculateAnalytics = () => {
     let totalStoryPoints = 0;
     let completedStoryPoints = 0;
@@ -170,6 +218,7 @@ function Analytics({ tickets }) {
   };
 
   const analytics = calculateAnalytics();
+  const sprintDetails = calculateSprintDetails();
   
   console.log('Analytics Summary:', {
     totalStoryPoints: analytics.totalStoryPoints,
@@ -181,6 +230,28 @@ function Analytics({ tickets }) {
   return (
     <div className="analytics">
       <h2>Analytics</h2>
+      
+      <div className="sprint-details-section">
+        <h3>Sprint Details</h3>
+        <div className="sprint-details-grid">
+          <div className="sprint-detail-item">
+            <span className="detail-label">Start Date:</span>
+            <span className="detail-value">{sprintDetails.startDate}</span>
+          </div>
+          <div className="sprint-detail-item">
+            <span className="detail-label">End Date:</span>
+            <span className="detail-value">{sprintDetails.endDate}</span>
+          </div>
+          <div className="sprint-detail-item">
+            <span className="detail-label">Total Resources:</span>
+            <span className="detail-value">{sprintDetails.totalResources}</span>
+          </div>
+          <div className="sprint-detail-item">
+            <span className="detail-label">EPICs Concentration:</span>
+            <span className="detail-value">{sprintDetails.epicConcentration}</span>
+          </div>
+        </div>
+      </div>
       
       <div className="analytics-grid">
         <div className="analytics-card">
