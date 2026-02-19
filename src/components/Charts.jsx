@@ -285,6 +285,46 @@ function Charts({ tickets }) {
       });
   };
 
+  // Resource Quality: Bug count by resource
+  const resourceQualityData = () => {
+    const resources = {};
+
+    tickets.forEach(ticket => {
+      const assignee = ticket.fields.assignee?.displayName || 'Unassigned';
+      const issueType = ticket.fields.issuetype?.name?.toLowerCase() || '';
+      const isBug = issueType.includes('bug');
+      const status = ticket.fields.status?.name?.toLowerCase() || '';
+      const isCompleted = status.includes('done') || status.includes('complete');
+
+      if (!resources[assignee]) {
+        resources[assignee] = {
+          totalBugs: 0,
+          completedBugs: 0,
+          openBugs: 0
+        };
+      }
+
+      if (isBug) {
+        resources[assignee].totalBugs++;
+        if (isCompleted) {
+          resources[assignee].completedBugs++;
+        } else {
+          resources[assignee].openBugs++;
+        }
+      }
+    });
+
+    return Object.entries(resources)
+      .filter(([name, data]) => data.totalBugs > 0) // Only show resources with bugs
+      .map(([name, data]) => ({
+        name: name.length > 20 ? name.substring(0, 20) + '...' : name,
+        totalBugs: data.totalBugs,
+        completedBugs: data.completedBugs,
+        openBugs: data.openBugs
+      }))
+      .sort((a, b) => b.totalBugs - a.totalBugs);
+  };
+
   const COLORS = ['#0052cc', '#00875a', '#ff991f', '#bf2600', '#6554c0', '#00b8d9'];
 
   return (
@@ -335,6 +375,12 @@ function Charts({ tickets }) {
           <h3>Resource Productivity</h3>
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={resourceProductivityData()}>
+              <defs>
+                <pattern id="redStripes" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+                  <rect width="8" height="8" fill="#0052cc" />
+                  <line x1="0" y1="0" x2="0" y2="8" stroke="#bf2600" strokeWidth="4" />
+                </pattern>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="name" 
@@ -353,7 +399,7 @@ function Charts({ tickets }) {
                 name="Total Story Points"
                 shape={(props) => {
                   const { fill, x, y, width, height, payload } = props;
-                  const finalFill = payload.isBelowTarget ? '#bf2600' : fill;
+                  const finalFill = payload.isBelowTarget ? 'url(#redStripes)' : fill;
                   return <rect x={x} y={y} width={width} height={height} fill={finalFill} />;
                 }}
                 fill="#0052cc"
@@ -364,7 +410,7 @@ function Charts({ tickets }) {
             </BarChart>
           </ResponsiveContainer>
           <div className="chart-inference">
-            <strong>What to Infer?</strong> Compare team member workload and completion rates. Green bars show progress vs total (blue/red). Red bars indicate users below target capacity. Compare against target (orange) to identify over/under allocation. High ticket count with low points may indicate task fragmentation.
+            <strong>What to Infer?</strong> Compare team member workload and completion rates. Green bars show progress vs total (blue). Blue bars with red stripes indicate users below target capacity. Compare against target (orange) to identify over/under allocation. High ticket count (purple) with low points may indicate task fragmentation.
           </div>
 
           <div className="resource-table-container">
@@ -419,6 +465,34 @@ function Charts({ tickets }) {
                 </tbody>
               </table>
             </div>
+            <div className="chart-inference">
+              <strong>What to Infer?</strong> Monitor active work distribution across the team. Yellow highlighted rows indicate resources with 2+ tickets in progress, which may signal multitasking or potential bottlenecks. Red rows show resources with no active work who may be available for new assignments. Check due dates to identify urgent items requiring attention.
+            </div>
+          </div>
+        </div>
+
+        <div className="chart-card full-width">
+          <h3>Resource Quality</h3>
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart data={resourceQualityData()}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="name" 
+                angle={-45} 
+                textAnchor="end" 
+                height={120}
+                interval={0}
+              />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="totalBugs" fill="#bf2600" name="Total Bugs" />
+              <Bar dataKey="completedBugs" fill="#00875a" name="Completed Bugs" />
+              <Bar dataKey="openBugs" fill="#ff991f" name="Open Bugs" />
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="chart-inference">
+            <strong>What to Infer?</strong> Track bug distribution across team members. High bug counts may indicate areas needing code review or additional testing. Green bars show bug resolution effectiveness. Orange bars highlight outstanding bugs requiring attention.
           </div>
         </div>
 

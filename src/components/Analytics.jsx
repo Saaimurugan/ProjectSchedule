@@ -196,6 +196,9 @@ function Analytics({ tickets }) {
           }}>
             {analytics.remainingWork} pts remaining - {analytics.capacityStatus}
           </div>
+          <div className="analytics-inference">
+            Compare total work against remaining capacity to assess sprint feasibility.
+          </div>
         </div>
 
         <div className="analytics-card success">
@@ -211,36 +214,57 @@ function Analytics({ tickets }) {
           }}>
             {analytics.completionRate}% complete - {analytics.completionStatus}
           </div>
+          <div className="analytics-inference">
+            Track actual vs expected completion to identify if team is on schedule.
+          </div>
         </div>
 
         <div className="analytics-card info">
           <div className="analytics-label">In Progress</div>
           <div className="analytics-value">{analytics.inProgressStoryPoints}</div>
+          <div className="analytics-inference">
+            Monitor active work. High values may indicate work in progress limits need attention.
+          </div>
         </div>
 
         <div className="analytics-card danger">
           <div className="analytics-label">Overdue Story Points</div>
           <div className="analytics-value">{analytics.overdueStoryPoints}</div>
+          <div className="analytics-inference">
+            Overdue work signals blockers or capacity issues requiring immediate action.
+          </div>
         </div>
 
         <div className="analytics-card info">
           <div className="analytics-label">Due Today</div>
           <div className="analytics-value">{analytics.todayStoryPoints}</div>
+          <div className="analytics-inference">
+            Prioritize these tickets to avoid them becoming overdue.
+          </div>
         </div>
 
         <div className="analytics-card success-light">
           <div className="analytics-label">Due Tomorrow</div>
           <div className="analytics-value">{analytics.tomorrowStoryPoints}</div>
+          <div className="analytics-inference">
+            Plan resources to complete these tickets on time.
+          </div>
         </div>
 
         <div className="analytics-card neutral">
           <div className="analytics-label">Future Story Points</div>
           <div className="analytics-value">{analytics.futureStoryPoints}</div>
+          <div className="analytics-inference">
+            Work scheduled for later in the sprint. Monitor to ensure timely completion.
+          </div>
         </div>
 
         <div className="analytics-card warning">
           <div className="analytics-label">No Due Date</div>
           <div className="analytics-value">{analytics.noDueDateTicketCount}</div>
+          <div className="analytics-inference">
+            Tickets without due dates may be deprioritized. Assign dates for better planning.
+          </div>
         </div>
       </div>
     </div>
