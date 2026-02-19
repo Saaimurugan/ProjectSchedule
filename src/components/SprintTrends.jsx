@@ -24,16 +24,26 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
   }, [sprintHistoryProp]);
 
   const formatChartData = () => {
-    return sprintHistory.map(sprint => ({
-      name: sprint.sprintName || sprint.sprintId,
-      productivity: sprint.productivity || 0,
-      velocity: sprint.velocity || 0,
-      bugs: sprint.bugCount || 0,
-      completedBugs: sprint.completedBugCount || 0,
-      completionRate: sprint.totalStoryPoints > 0 
-        ? ((sprint.completedStoryPoints / sprint.totalStoryPoints) * 100).toFixed(1)
-        : 0
-    }));
+    return sprintHistory.map(sprint => {
+      // Calculate on hold tickets from ticket details
+      const onHoldTickets = sprint.ticketDetails?.filter(ticket => 
+        ticket.status?.toLowerCase().includes('hold') || 
+        ticket.status?.toLowerCase().includes('blocked')
+      ).length || 0;
+
+      return {
+        name: sprint.sprintName || sprint.sprintId,
+        productivity: sprint.productivity || 0,
+        velocity: sprint.velocity || 0,
+        bugs: sprint.bugCount || 0,
+        completedBugs: sprint.completedBugCount || 0,
+        completionRate: sprint.totalStoryPoints > 0 
+          ? ((sprint.completedStoryPoints / sprint.totalStoryPoints) * 100).toFixed(1)
+          : 0,
+        completedTickets: sprint.completedTickets || 0,
+        onHoldTickets: onHoldTickets
+      };
+    });
   };
 
   if (loading && sprintHistory.length === 0) {
@@ -137,6 +147,56 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
             </ResponsiveContainer>
             <div className="chart-inference">
               <strong>What to Infer?</strong> Overall team productivity percentage over sprints. Consistent high productivity indicates effective sprint planning and execution.
+            </div>
+          </div>
+
+          <div className="trend-card full-width">
+            <h3>Tickets Completed Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={formatChartData()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="completedTickets" fill="#00875a" name="Completed Tickets" />
+                <Line 
+                  type="monotone" 
+                  dataKey="completedTickets" 
+                  stroke="#00875a" 
+                  strokeWidth={2}
+                  name="Completion Trend"
+                  dot={{ fill: '#00875a', r: 4 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="chart-inference">
+              <strong>What to Infer?</strong> Track the number of tickets completed per sprint. Consistent or increasing completion indicates steady team throughput and delivery capacity.
+            </div>
+          </div>
+
+          <div className="trend-card full-width">
+            <h3>Tickets on Hold Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={formatChartData()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="onHoldTickets" fill="#ff991f" name="Tickets on Hold" />
+                <Line 
+                  type="monotone" 
+                  dataKey="onHoldTickets" 
+                  stroke="#ff991f" 
+                  strokeWidth={2}
+                  name="On Hold Trend"
+                  dot={{ fill: '#ff991f', r: 4 }}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="chart-inference">
+              <strong>What to Infer?</strong> Monitor tickets that are blocked or on hold. Increasing trend may indicate dependencies, blockers, or process bottlenecks that need attention.
             </div>
           </div>
         </div>
