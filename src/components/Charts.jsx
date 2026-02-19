@@ -447,7 +447,7 @@ function Charts({ tickets }) {
               <defs>
                 <pattern id="redStripes" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
                   <rect width="8" height="8" fill="#0052cc" />
-                  <line x1="0" y1="0" x2="0" y2="8" stroke="#bf2600" strokeWidth="4" />
+                  <line x1="0" y1="0" x2="0" y2="8" stroke="#ffffff" strokeWidth="4" />
                 </pattern>
               </defs>
               <CartesianGrid strokeDasharray="3 3" />
