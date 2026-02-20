@@ -117,7 +117,7 @@ function Charts({ tickets }) {
   // Chart 3: Resource Productivity
   const resourceProductivityData = () => {
     const resources = {};
-    const sprintDays = 14; // Total sprint duration
+    const sprintDays = 10; // Total sprint duration
     const pointsPerDay = 3;
     const targetPerResource = sprintDays * pointsPerDay;
 
@@ -474,7 +474,7 @@ function Charts({ tickets }) {
                 fill="#0052cc"
               />
               <Bar yAxisId="left" dataKey="completedPoints" fill="#00875a" name="Completed Points" />
-              <Bar yAxisId="left" dataKey="target" fill="#ff991f" name="Target (14 days × 3 pts/day)" />
+              <Bar yAxisId="left" dataKey="target" fill="#ff991f" name="Target (10 days × 3 pts/day)" />
               <Bar yAxisId="right" dataKey="tickets" fill="#6554c0" name="Number of Tickets" />
             </BarChart>
           </ResponsiveContainer>

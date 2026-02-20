@@ -87,7 +87,7 @@ function Analytics({ tickets }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const sprintEndDate = new Date(today);
-    sprintEndDate.setDate(sprintEndDate.getDate() + 14);
+    sprintEndDate.setDate(sprintEndDate.getDate() + 10);
 
     return {
       startDate: today.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
@@ -177,11 +177,11 @@ function Analytics({ tickets }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Assuming sprint ends in 14 days (2 weeks) - you can adjust this
+    // Sprint is 10 working days
     const sprintEndDate = new Date(today);
-    sprintEndDate.setDate(sprintEndDate.getDate() + 14);
+    sprintEndDate.setDate(sprintEndDate.getDate() + 10);
     
-    const totalSprintDays = 14; // Total sprint duration
+    const totalSprintDays = 10; // Total sprint duration
     const remainingDays = Math.max(0, Math.ceil((sprintEndDate - today) / (1000 * 60 * 60 * 24)));
     const elapsedDays = totalSprintDays - remainingDays;
     
