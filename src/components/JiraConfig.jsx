@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './JiraConfig.css';
 
 function JiraConfig({ onSubmit }) {
-  const [jql, setJql] = useState('sprint = "AIML Sprint 37" ORDER BY created DESC');
+  const [jql, setJql] = useState('sprint = "AIML Sprint 38" ORDER BY created DESC');
 
   const handleSubmit = (e) => {
     e.preventDefault();
