@@ -152,8 +152,13 @@
     padding: 1rem;
   }
 
+  .ticket-list h2 {
+    font-size: 1.1rem;
+  }
+
   .date-group {
     padding: 0.75rem;
+    margin-bottom: 1rem;
   }
 
   .date-group-title {
@@ -206,5 +211,43 @@
     font-size: 0.85rem;
     word-wrap: break-word;
     overflow-wrap: break-word;
+  }
+}
+
+@media (max-width: 480px) {
+  .ticket-list {
+    padding: 0.75rem;
+  }
+
+  .ticket-list h2 {
+    font-size: 1rem;
+  }
+
+  .date-group {
+    padding: 0.5rem;
+  }
+
+  .date-group-title {
+    font-size: 0.9rem;
+  }
+
+  .ticket-item {
+    padding: 0.5rem;
+  }
+
+  .ticket-key {
+    font-size: 0.75rem;
+  }
+
+  .ticket-summary {
+    font-size: 0.85rem;
+  }
+
+  .ticket-meta {
+    font-size: 0.75rem;
+  }
+
+  .ticket-description {
+    font-size: 0.8rem;
   }
 }
