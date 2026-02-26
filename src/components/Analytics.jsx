@@ -102,7 +102,7 @@ function Analytics({ tickets }) {
     let totalStoryPoints = 0;
     let completedStoryPoints = 0;
     let inProgressStoryPoints = 0;
-    let overdueStoryPoints = 0;
+    let overdueTickets = [];
     let todayStoryPoints = 0;
     let tomorrowStoryPoints = 0;
     let futureStoryPoints = 0;
@@ -148,8 +148,15 @@ function Analytics({ tickets }) {
       switch (dueDateStatus) {
         case 'overdue':
           // Only count overdue if not completed
-          if (typeof points === 'number' && !isNaN(points) && !isCompleted) {
-            overdueStoryPoints += points;
+          if (!isCompleted) {
+            overdueTickets.push({
+              key: ticket.key,
+              summary: ticket.fields.summary,
+              assignee: assignee || 'Unassigned',
+              dueDate: ticket.fields.duedate,
+              storyPoints: points,
+              status: ticket.fields.status?.name || 'Unknown'
+            });
           }
           break;
         case 'today':
@@ -202,7 +209,7 @@ function Analytics({ tickets }) {
       totalStoryPoints,
       completedStoryPoints,
       inProgressStoryPoints,
-      overdueStoryPoints,
+      overdueTickets,
       todayStoryPoints,
       tomorrowStoryPoints,
       futureStoryPoints,
@@ -302,12 +309,33 @@ function Analytics({ tickets }) {
           </div>
         </div>
 
-        <div className="analytics-card danger">
-          <div className="analytics-label">Overdue Story Points</div>
-          <div className="analytics-value">{analytics.overdueStoryPoints}</div>
+        <div className="analytics-card danger overdue-card">
+          <div className="analytics-label">Overdue Tickets</div>
+          <div className="analytics-value">{analytics.overdueTickets.length}</div>
           <div className="analytics-inference">
             Overdue work signals blockers or capacity issues requiring immediate action.
           </div>
+          {analytics.overdueTickets.length > 0 && (
+            <div className="overdue-tickets-list">
+              {analytics.overdueTickets.map((ticket, index) => (
+                <div key={index} className="overdue-ticket-item">
+                  <a 
+                    href={`https://highwirepress.atlassian.net/browse/${ticket.key}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="overdue-ticket-link"
+                  >
+                    {ticket.key}
+                  </a>
+                  <span className="overdue-ticket-summary">{ticket.summary}</span>
+                  <div className="overdue-ticket-meta">
+                    <span className="overdue-assignee">{ticket.assignee}</span>
+                    <span className="overdue-points">{ticket.storyPoints} pts</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="analytics-card info">
