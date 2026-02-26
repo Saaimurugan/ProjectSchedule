@@ -215,6 +215,14 @@
   color: #0052cc;
 }
 
+.resource-table .status-cell {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #0052cc;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .resource-table .no-due-date {
   color: #bf2600;
   font-weight: 600;

@@ -291,11 +291,34 @@ function Charts({ tickets }) {
       }
     });
 
-    // Get tickets in progress
+    // Get tickets that are actively being worked on (not done/closed)
     const inProgressTickets = tickets
       .filter(ticket => {
         const status = ticket.fields.status?.name?.toLowerCase() || '';
-        return status.includes('in progress');
+        const statusCategory = ticket.fields.status?.statusCategory?.key?.toLowerCase() || '';
+        
+        // Include tickets that are:
+        // 1. In progress status
+        // 2. Not in "done" category
+        // 3. Not completed/closed
+        // 4. Include common active statuses
+        const isActiveWork = 
+          status.includes('in progress') ||
+          status.includes('started') ||
+          status.includes('development') ||
+          status.includes('refinement') ||
+          status.includes('review') ||
+          status.includes('testing') ||
+          (statusCategory === 'indeterminate' || statusCategory === 'new');
+        
+        const isCompleted = 
+          status.includes('done') ||
+          status.includes('complete') ||
+          status.includes('closed') ||
+          status.includes('resolved') ||
+          statusCategory === 'done';
+        
+        return isActiveWork && !isCompleted;
       })
       .map(ticket => ({
         resource: ticket.fields.assignee?.displayName || 'Unassigned',
@@ -304,6 +327,7 @@ function Charts({ tickets }) {
         description: ticket.fields.summary,
         dueDate: formatDate(ticket.fields.duedate),
         storyPoints: getStoryPointValue(ticket),
+        status: ticket.fields.status?.name || 'Unknown',
         hasTickets: true
       }));
 
@@ -319,15 +343,16 @@ function Charts({ tickets }) {
       shouldHighlight: ticketCountByResource[ticket.resource] >= 2
     }));
 
-    // Find assignees with no in-progress tickets
+    // Find assignees with no active tickets
     const assigneesWithTickets = new Set(inProgressTickets.map(t => t.resource));
     const assigneesWithoutTickets = Array.from(allAssignees)
       .filter(assignee => !assigneesWithTickets.has(assignee))
       .map(assignee => ({
         resource: assignee,
         ticketId: '-',
+        status: '-',
         epic: '-',
-        description: 'No tickets in progress',
+        description: 'No active tickets',
         dueDate: '-',
         storyPoints: '-',
         hasTickets: false,
@@ -483,13 +508,14 @@ function Charts({ tickets }) {
           </div>
 
           <div className="resource-table-container">
-            <h4>In Progress Tickets by Resource</h4>
+            <h4>Active Tickets by Resource</h4>
             <div className="table-wrapper">
               <table className="resource-table">
                 <thead>
                   <tr>
                     <th>Resource</th>
                     <th>Ticket ID</th>
+                    <th>Status</th>
                     <th>Epic</th>
                     <th>Description</th>
                     <th>Due Date</th>
@@ -518,6 +544,7 @@ function Charts({ tickets }) {
                             row.ticketId
                           )}
                         </td>
+                        <td className="status-cell">{row.status || '-'}</td>
                         <td>{row.epic}</td>
                         <td className="description-cell">{row.description}</td>
                         <td className={row.dueDate === 'No due date' ? 'no-due-date' : ''}>
@@ -528,7 +555,7 @@ function Charts({ tickets }) {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#5e6c84' }}>
+                      <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#5e6c84' }}>
                         No resources found
                       </td>
                     </tr>
@@ -537,7 +564,7 @@ function Charts({ tickets }) {
               </table>
             </div>
             <div className="chart-inference">
-              <strong>What to Infer?</strong> Monitor active work distribution across the team. Yellow highlighted rows indicate resources with 2+ tickets in progress, which may signal multitasking or potential bottlenecks. Red rows show resources with no active work who may be available for new assignments. Check due dates to identify urgent items requiring attention.
+              <strong>What to Infer?</strong> Monitor active work distribution across the team. Yellow highlighted rows indicate resources with 2+ tickets in active status, which may signal multitasking or potential bottlenecks. Red rows show resources with no active work who may be available for new assignments. Check due dates to identify urgent items requiring attention.
             </div>
           </div>
         </div>
