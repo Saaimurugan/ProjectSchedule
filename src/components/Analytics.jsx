@@ -2,6 +2,23 @@ import React from 'react';
 import './Analytics.css';
 
 function Analytics({ tickets }) {
+  const countBusinessDays = (startDate, endDate) => {
+    let count = 0;
+    const current = new Date(startDate);
+    const end = new Date(endDate);
+    
+    while (current <= end) {
+      const dayOfWeek = current.getDay();
+      // 0 = Sunday, 6 = Saturday
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        count++;
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return count;
+  };
+
   const getStoryPointValue = (ticket) => {
     const fields = ticket.fields;
     
@@ -83,25 +100,38 @@ function Analytics({ tickets }) {
       ? `${topEpic[0]} (${topEpic[1]} tickets, ${((topEpic[1] / tickets.length) * 100).toFixed(0)}%)`
       : 'No epics';
 
-    // Extract sprint dates from tickets
-    let sprintStartDate = null;
-    let sprintEndDate = null;
+    // Extract sprint dates - find the most common active sprint
+    const sprintCounts = {};
     
-    // Check for sprint information in tickets
     tickets.forEach(ticket => {
       const sprint = ticket.fields.sprint || 
                      ticket.fields.customfield_10020?.[0] || 
                      ticket.fields.customfield_10010?.[0];
       
-      if (sprint) {
-        if (sprint.startDate && (!sprintStartDate || new Date(sprint.startDate) < new Date(sprintStartDate))) {
-          sprintStartDate = sprint.startDate;
+      if (sprint && sprint.state === 'active') {
+        const sprintKey = `${sprint.startDate}_${sprint.endDate}`;
+        if (!sprintCounts[sprintKey]) {
+          sprintCounts[sprintKey] = {
+            count: 0,
+            startDate: sprint.startDate,
+            endDate: sprint.endDate,
+            name: sprint.name
+          };
         }
-        if (sprint.endDate && (!sprintEndDate || new Date(sprint.endDate) > new Date(sprintEndDate))) {
-          sprintEndDate = sprint.endDate;
-        }
+        sprintCounts[sprintKey].count++;
       }
     });
+
+    // Get the most common active sprint
+    const sortedSprints = Object.values(sprintCounts).sort((a, b) => b.count - a.count);
+    let sprintStartDate = null;
+    let sprintEndDate = null;
+    
+    if (sortedSprints.length > 0) {
+      sprintStartDate = sortedSprints[0].startDate;
+      sprintEndDate = sortedSprints[0].endDate;
+      console.log('Using active sprint:', sortedSprints[0].name, 'with', sortedSprints[0].count, 'tickets');
+    }
 
     // Fallback to current date + 10 days if no sprint dates found
     if (!sprintStartDate || !sprintEndDate) {
@@ -119,10 +149,14 @@ function Analytics({ tickets }) {
       endDate: new Date(sprintEndDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
       totalResources: uniqueResources.size,
       epicConcentration: epicConcentration,
-      totalEpics: sortedEpics.length
+      totalEpics: sortedEpics.length,
+      sprintStartDate,
+      sprintEndDate
     };
   };
 
+  const sprintDetails = calculateSprintDetails();
+  
   const calculateAnalytics = () => {
     let totalStoryPoints = 0;
     let completedStoryPoints = 0;
@@ -208,43 +242,20 @@ function Analytics({ tickets }) {
       }
     });
 
-    // Calculate sprint capacity using actual sprint dates
+    // Calculate sprint capacity using sprint dates from sprintDetails
     const resourceCount = uniqueAssignees.size;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Extract sprint dates from tickets
-    let sprintStartDate = null;
-    let sprintEndDate = null;
-    
-    tickets.forEach(ticket => {
-      const sprint = ticket.fields.sprint || 
-                     ticket.fields.customfield_10020?.[0] || 
-                     ticket.fields.customfield_10010?.[0];
-      
-      if (sprint) {
-        if (sprint.startDate && (!sprintStartDate || new Date(sprint.startDate) < new Date(sprintStartDate))) {
-          sprintStartDate = new Date(sprint.startDate);
-        }
-        if (sprint.endDate && (!sprintEndDate || new Date(sprint.endDate) > new Date(sprintEndDate))) {
-          sprintEndDate = new Date(sprint.endDate);
-        }
-      }
-    });
-    
-    // Fallback to 10 days if no sprint dates found
-    if (!sprintStartDate || !sprintEndDate) {
-      sprintStartDate = new Date(today);
-      sprintEndDate = new Date(today);
-      sprintEndDate.setDate(sprintEndDate.getDate() + 10);
-    }
+    const sprintStartDate = new Date(sprintDetails.sprintStartDate);
+    const sprintEndDate = new Date(sprintDetails.sprintEndDate);
     
     sprintStartDate.setHours(0, 0, 0, 0);
     sprintEndDate.setHours(0, 0, 0, 0);
     
-    // Calculate total sprint days
-    const totalSprintDays = Math.ceil((sprintEndDate - sprintStartDate) / (1000 * 60 * 60 * 24));
-    const remainingDays = Math.max(0, Math.ceil((sprintEndDate - today) / (1000 * 60 * 60 * 24)));
+    // Calculate business days (excluding weekends)
+    const totalSprintDays = countBusinessDays(sprintStartDate, sprintEndDate);
+    const remainingDays = Math.max(0, countBusinessDays(today, sprintEndDate));
     const elapsedDays = Math.max(0, totalSprintDays - remainingDays);
     
     const pointsPerResourcePerDay = 3;
@@ -275,12 +286,12 @@ function Analytics({ tickets }) {
       remainingCapacity,
       remainingWork,
       capacityStatus,
-      completionStatus
+      completionStatus,
+      totalSprintCapacity
     };
   };
 
   const analytics = calculateAnalytics();
-  const sprintDetails = calculateSprintDetails();
   
   console.log('Analytics Summary:', {
     totalStoryPoints: analytics.totalStoryPoints,
@@ -318,7 +329,20 @@ function Analytics({ tickets }) {
       <div className="analytics-grid">
         <div className="analytics-card">
           <div className="analytics-label">Total Story Points</div>
-          <div className="analytics-value">{analytics.totalStoryPoints}/{analytics.remainingCapacity}</div>
+          <div className="analytics-value">{analytics.totalStoryPoints}/{analytics.totalSprintCapacity}</div>
+          <div className="analytics-subtitle">
+            {analytics.resourceCount} resources × {analytics.totalSprintDays} days × 3 pts/day = {analytics.totalSprintCapacity} capacity
+          </div>
+          <div className="analytics-inference">
+            Total sprint points compared to full sprint capacity.
+          </div>
+        </div>
+
+        <div className="analytics-card" style={{ 
+          borderLeft: `4px solid ${analytics.capacityStatus === 'On Track' ? '#00875a' : '#bf2600'}`
+        }}>
+          <div className="analytics-label">Remaining Points</div>
+          <div className="analytics-value">{analytics.remainingWork}/{analytics.remainingCapacity}</div>
           <div className="analytics-subtitle">
             {analytics.resourceCount} resources × {analytics.remainingDays} days × 3 pts/day = {analytics.remainingCapacity} capacity
           </div>
