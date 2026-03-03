@@ -29,27 +29,63 @@ function ResourceQuality({ tickets }) {
     return 0;
   };
 
-  const getInProgressTicketsByResource = () => {
-    const resourceMap = {};
-    
-    tickets.forEach(ticket => {
-      const status = ticket.fields.status?.name || '';
-      const assignee = ticket.fields.assignee?.displayName || 'Unassigned';
-      
-      // Include both "Dev" and "In Progress" statuses
-      if (status === 'Dev' || status === 'In Progress') {
-        if (!resourceMap[assignee]) {
-          resourceMap[assignee] = [];
-        }
-        resourceMap[assignee].push(ticket);
-      }
-    });
-    
-    return resourceMap;
+  const getEpicName = (ticket) => {
+    const fields = ticket.fields;
+    return fields.customfield_10014?.name || 
+           fields.customfield_10008?.name ||
+           fields.epic?.name ||
+           fields.parent?.fields?.summary ||
+           'No Epic';
   };
 
-  const resourceTickets = getInProgressTicketsByResource();
-  const sortedResources = Object.entries(resourceTickets).sort((a, b) => a[0].localeCompare(b[0]));
+  const formatDate = (dateString) => {
+    if (!dateString) return 'No due date';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  const getResourceTableData = () => {
+    // Get tickets in progress or dev
+    const inProgressTickets = tickets
+      .filter(ticket => {
+        const status = ticket.fields.status?.name?.toLowerCase() || '';
+        return status.includes('in progress') || status === 'dev';
+      })
+      .map(ticket => {
+        const epicName = getEpicName(ticket);
+        const dueDate = ticket.fields.duedate;
+        return {
+          resource: ticket.fields.assignee?.displayName || 'Unassigned',
+          ticketId: ticket.key,
+          epic: epicName,
+          description: ticket.fields.summary,
+          dueDate: formatDate(dueDate),
+          rawDueDate: dueDate,
+          storyPoints: getStoryPointValue(ticket),
+          hasNoDueDate: !dueDate,
+          hasNoEpic: epicName === 'No Epic'
+        };
+      });
+
+    // Count tickets per resource
+    const ticketCountByResource = {};
+    inProgressTickets.forEach(ticket => {
+      ticketCountByResource[ticket.resource] = (ticketCountByResource[ticket.resource] || 0) + 1;
+    });
+
+    // Add highlight flag for resources with 2+ tickets
+    const ticketsWithHighlight = inProgressTickets.map(ticket => ({
+      ...ticket,
+      shouldHighlightRow: ticketCountByResource[ticket.resource] >= 2
+    }));
+
+    // Sort by resource name
+    return ticketsWithHighlight.sort((a, b) => a.resource.localeCompare(b.resource));
+  };
 
   return (
     <div className="resource-quality">
@@ -57,88 +93,53 @@ function ResourceQuality({ tickets }) {
       
       <div className="what-to-infer">
         <strong>What to Infer?</strong>
-        <p>Monitor active work distribution across the team. Yellow highlighted rows indicate resources with 2+ tickets in progress, which may signal multitasking or potential bottlenecks. Red rows show resources with no active work who may be available for new assignments. Check due dates to identify urgent items requiring attention.</p>
+        <p>Monitor active work distribution across the team. Blue highlighted rows indicate resources with 2+ tickets in "In Progress" or "Dev" status, which may signal multitasking or potential bottlenecks. Red text in Due Date column indicates no due date set. Yellow text in Epic column indicates no epic assigned. Check due dates to identify urgent items requiring attention.</p>
       </div>
 
       <table className="resource-table">
         <thead>
           <tr>
             <th>Resource</th>
-            <th>Ticket</th>
+            <th>Ticket ID</th>
             <th>Epic</th>
-            <th>Summary</th>
+            <th>Description</th>
             <th>Due Date</th>
             <th>Story Points</th>
           </tr>
         </thead>
         <tbody>
-          {sortedResources.map(([resource, tickets]) => {
-            const rowClass = tickets.length >= 2 ? 'warning-row' : '';
-            
-            return tickets.map((ticket, index) => {
-              const points = getStoryPointValue(ticket);
-              const epic = ticket.fields.customfield_10014?.name || 
-                          ticket.fields.customfield_10008?.name ||
-                          ticket.fields.epic?.name ||
-                          ticket.fields.parent?.fields?.summary ||
-                          'No Epic';
-              const dueDate = ticket.fields.duedate 
-                ? new Date(ticket.fields.duedate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                : 'No due date';
-              
-              return (
-                <tr key={ticket.id} className={rowClass}>
-                  {index === 0 && (
-                    <td rowSpan={tickets.length} className="resource-name">
-                      {resource}
-                    </td>
-                  )}
-                  <td>
-                    <a 
-                      href={`https://highwirepress.atlassian.net/browse/${ticket.key}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="ticket-link"
-                    >
-                      {ticket.key}
-                    </a>
-                  </td>
-                  <td>{epic}</td>
-                  <td className="summary-cell">{ticket.fields.summary}</td>
-                  <td>{dueDate}</td>
-                  <td className="points-cell">
-                    {points > 0 ? (
-                      <span className="points-badge">{points} pts</span>
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                </tr>
-              );
-            });
-          })}
-          
-          {/* Show resources with no in-progress tickets */}
-          {(() => {
-            const allResources = new Set();
-            tickets.forEach(ticket => {
-              const assignee = ticket.fields.assignee?.displayName;
-              if (assignee) {
-                allResources.add(assignee);
-              }
-            });
-            
-            const resourcesWithNoWork = Array.from(allResources)
-              .filter(resource => !resourceTickets[resource])
-              .sort();
-            
-            return resourcesWithNoWork.map(resource => (
-              <tr key={resource} className="no-work-row">
-                <td className="resource-name">{resource}</td>
-                <td colSpan="5" className="no-tickets-message">No tickets in progress</td>
+          {getResourceTableData().length > 0 ? (
+            getResourceTableData().map((row, index) => (
+              <tr 
+                key={index} 
+                className={row.shouldHighlightRow ? 'highlight-row-blue' : ''}
+              >
+                <td>{row.resource}</td>
+                <td>
+                  <a 
+                    href={`https://highwirepress.atlassian.net/browse/${row.ticketId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ticket-link"
+                  >
+                    {row.ticketId}
+                  </a>
+                </td>
+                <td className={row.hasNoEpic ? 'no-epic' : ''}>{row.epic}</td>
+                <td className="description-cell">{row.description}</td>
+                <td className={row.hasNoDueDate ? 'no-due-date' : ''}>
+                  {row.dueDate}
+                </td>
+                <td className="points-cell">{row.storyPoints}</td>
               </tr>
-            ));
-          })()}
+            ))
+          ) : (
+            <tr>
+              <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#5e6c84' }}>
+                No tickets in progress
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
