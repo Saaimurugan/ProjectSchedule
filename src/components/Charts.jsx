@@ -282,68 +282,43 @@ function Charts({ tickets }) {
   };
 
   const getResourceTableData = () => {
-    // Get all unique assignees from all tickets
-    const allAssignees = new Set();
-    tickets.forEach(ticket => {
-      const assignee = ticket.fields.assignee?.displayName;
-      if (assignee) {
-        allAssignees.add(assignee);
-      }
-    });
+      // Get tickets in progress or dev
+      const inProgressTickets = tickets
+        .filter(ticket => {
+          const status = ticket.fields.status?.name?.toLowerCase() || '';
+          return status.includes('in progress') || status === 'dev';
+        })
+        .map(ticket => {
+          const epicName = getEpicName(ticket);
+          const dueDate = ticket.fields.duedate;
+          return {
+            resource: ticket.fields.assignee?.displayName || 'Unassigned',
+            ticketId: ticket.key,
+            epic: epicName,
+            description: ticket.fields.summary,
+            dueDate: formatDate(dueDate),
+            rawDueDate: dueDate,
+            storyPoints: getStoryPointValue(ticket),
+            hasNoDueDate: !dueDate,
+            hasNoEpic: epicName === 'No Epic'
+          };
+        });
 
-    // Get tickets in progress
-    const inProgressTickets = tickets
-      .filter(ticket => {
-        const status = ticket.fields.status?.name?.toLowerCase() || '';
-        return status.includes('in progress');
-      })
-      .map(ticket => ({
-        resource: ticket.fields.assignee?.displayName || 'Unassigned',
-        ticketId: ticket.key,
-        epic: getEpicName(ticket),
-        description: ticket.fields.summary,
-        dueDate: formatDate(ticket.fields.duedate),
-        storyPoints: getStoryPointValue(ticket),
-        hasTickets: true
-      }));
-
-    // Count tickets per resource
-    const ticketCountByResource = {};
-    inProgressTickets.forEach(ticket => {
-      ticketCountByResource[ticket.resource] = (ticketCountByResource[ticket.resource] || 0) + 1;
-    });
-
-    // Add highlight flag for resources with 2+ tickets
-    const ticketsWithHighlight = inProgressTickets.map(ticket => ({
-      ...ticket,
-      shouldHighlight: ticketCountByResource[ticket.resource] >= 2
-    }));
-
-    // Find assignees with no in-progress tickets
-    const assigneesWithTickets = new Set(inProgressTickets.map(t => t.resource));
-    const assigneesWithoutTickets = Array.from(allAssignees)
-      .filter(assignee => !assigneesWithTickets.has(assignee))
-      .map(assignee => ({
-        resource: assignee,
-        ticketId: '-',
-        epic: '-',
-        description: 'No tickets in progress',
-        dueDate: '-',
-        storyPoints: '-',
-        hasTickets: false,
-        shouldHighlight: false
-      }));
-
-    // Combine and sort
-    return [...ticketsWithHighlight, ...assigneesWithoutTickets]
-      .sort((a, b) => {
-        // Sort by hasTickets first (true before false), then by resource name
-        if (a.hasTickets !== b.hasTickets) {
-          return b.hasTickets ? 1 : -1;
-        }
-        return a.resource.localeCompare(b.resource);
+      // Count tickets per resource
+      const ticketCountByResource = {};
+      inProgressTickets.forEach(ticket => {
+        ticketCountByResource[ticket.resource] = (ticketCountByResource[ticket.resource] || 0) + 1;
       });
-  };
+
+      // Add highlight flag for resources with 2+ tickets
+      const ticketsWithHighlight = inProgressTickets.map(ticket => ({
+        ...ticket,
+        shouldHighlightRow: ticketCountByResource[ticket.resource] >= 2
+      }));
+
+      // Sort by resource name
+      return ticketsWithHighlight.sort((a, b) => a.resource.localeCompare(b.resource));
+    };
 
   // Resource Quality: Bug count by resource
   const resourceQualityData = () => {
@@ -501,26 +476,22 @@ function Charts({ tickets }) {
                     getResourceTableData().map((row, index) => (
                       <tr 
                         key={index} 
-                        className={`${!row.hasTickets ? 'no-tickets-row' : ''} ${row.shouldHighlight ? 'highlight-row' : ''}`}
+                        className={row.shouldHighlightRow ? 'highlight-row-blue' : ''}
                       >
                         <td>{row.resource}</td>
                         <td>
-                          {row.ticketId !== '-' ? (
-                            <a 
-                              href={`https://highwirepress.atlassian.net/browse/${row.ticketId}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="ticket-link"
-                            >
-                              {row.ticketId}
-                            </a>
-                          ) : (
-                            row.ticketId
-                          )}
+                          <a 
+                            href={`https://highwirepress.atlassian.net/browse/${row.ticketId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ticket-link"
+                          >
+                            {row.ticketId}
+                          </a>
                         </td>
-                        <td>{row.epic}</td>
+                        <td className={row.hasNoEpic ? 'no-epic' : ''}>{row.epic}</td>
                         <td className="description-cell">{row.description}</td>
-                        <td className={row.dueDate === 'No due date' ? 'no-due-date' : ''}>
+                        <td className={row.hasNoDueDate ? 'no-due-date' : ''}>
                           {row.dueDate}
                         </td>
                         <td className="points-cell">{row.storyPoints}</td>
@@ -537,7 +508,7 @@ function Charts({ tickets }) {
               </table>
             </div>
             <div className="chart-inference">
-              <strong>What to Infer?</strong> Monitor active work distribution across the team. Yellow highlighted rows indicate resources with 2+ tickets in progress, which may signal multitasking or potential bottlenecks. Red rows show resources with no active work who may be available for new assignments. Check due dates to identify urgent items requiring attention.
+              <strong>What to Infer?</strong> Monitor active work distribution across the team. Blue highlighted rows indicate resources with 2+ tickets in "In Progress" or "Dev" status, which may signal multitasking or potential bottlenecks. Red text in Due Date column indicates no due date set. Yellow text in Epic column indicates no epic assigned. Check due dates to identify urgent items requiring attention.
             </div>
           </div>
         </div>
