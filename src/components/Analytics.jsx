@@ -84,7 +84,7 @@ function Analytics({ tickets }) {
         ticket.fields.customfield_10020?.[0] ||
         ticket.fields.customfield_10010?.[0];
 
-      if (sprint && sprint.state === 'active') {
+      if (sprint) {
         const sprintKey = `${sprint.startDate}_${sprint.endDate}`;
         if (!sprintCounts[sprintKey]) {
           sprintCounts[sprintKey] = {
@@ -366,7 +366,7 @@ function Analytics({ tickets }) {
               {analytics.overdueTickets.map((ticket, index) => (
                 <div key={index} className="overdue-ticket-item">
                   <a
-                    href={`https://highwirepress.atlassian.net/browse/${ticket.key}`}
+                    href={`https://mpscentral.atlassian.net/browse/${ticket.key}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="overdue-ticket-link"

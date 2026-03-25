@@ -69,7 +69,7 @@ function TicketList({ tickets, groupBy = 'date' }) {
   };
 
   const renderTicket = (ticket) => {
-    const ticketUrl = `https://highwirepress.atlassian.net/browse/${ticket.key}`;
+    const ticketUrl = `https://mpscentral.atlassian.net/browse/${ticket.key}`;
     
     return (
       <a 

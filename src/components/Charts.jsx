@@ -453,7 +453,7 @@ function Charts({ tickets }) {
                         <td>{row.resource}</td>
                         <td>
                           <a 
-                            href={`https://highwirepress.atlassian.net/browse/${row.ticketId}`}
+                            href={`https://mpscentral.atlassian.net/browse/${row.ticketId}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="ticket-link"
