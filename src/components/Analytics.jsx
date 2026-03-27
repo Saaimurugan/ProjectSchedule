@@ -84,7 +84,7 @@ function Analytics({ tickets }) {
         ticket.fields.customfield_10020?.[0] ||
         ticket.fields.customfield_10010?.[0];
 
-      if (sprint && sprint.state === 'active') {
+      if (sprint) {
         const sprintKey = `${sprint.startDate}_${sprint.endDate}`;
         if (!sprintCounts[sprintKey]) {
           sprintCounts[sprintKey] = {
