@@ -63,39 +63,29 @@ function App() {
     setError(null);
 
     try {
-      let allIssues = [];
-      let startAt = 0;
-      const maxResults = 50;
-      let total = 1;
-      let parsedData;
+      const requestBody = {
+        jql: jiraConfig.jql
+      };
 
-      while (startAt < total) {
-        const response = await fetch("https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev/mps", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...jiraConfig,
-            jql: jiraConfig.jql,
-            startAt,
-            maxResults
-          })
-        });
+      const response = await fetch("https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev/mps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody)
+      });
 
-        const raw = await response.json();
-        let parsed = raw;
-        if (typeof parsed === "string") parsed = JSON.parse(parsed);
-        if (parsed.body && typeof parsed.body === "string") parsed = JSON.parse(parsed.body);
+      const raw = await response.json();
+      let parsed = raw;
+      if (typeof parsed === "string") parsed = JSON.parse(parsed);
+      if (parsed.body && typeof parsed.body === "string") parsed = JSON.parse(parsed.body);
 
-        // Capture extra fields from the first page
-        if (startAt === 0) {
-          parsedData = parsed;
-        }
+      console.log('API Response:', {
+        issuesCount: parsed.issues?.length || 0,
+        totalIssues: parsed.total,
+        hasSprintHistory: !!parsed.sprintHistory,
+        issueSample: parsed.issues?.[0]?.key
+      });
 
-        total = parsed.total || 0;
-        allIssues = [...allIssues, ...(parsed.issues || [])];
-        startAt += maxResults;
-      }
-
+      const allIssues = parsed.issues || [];
       setTickets(allIssues);
       setFilteredTickets(allIssues);
       setConfig(jiraConfig);
@@ -108,14 +98,16 @@ function App() {
       });
 
       // Store sprint history if included in response
-      if (parsedData.sprintHistory) {
-        setSprintHistory(parsedData.sprintHistory);
+      if (parsed.sprintHistory) {
+        setSprintHistory(parsed.sprintHistory);
       }
 
       // Store story points field ID for later use
-      if (parsedData.storyPointsFieldId) {
-        window.storyPointsFieldId = parsedData.storyPointsFieldId;
+      if (parsed.storyPointsFieldId) {
+        window.storyPointsFieldId = parsed.storyPointsFieldId;
       }
+
+      console.log(`Successfully fetched ${allIssues.length} tickets`);
     } catch (err) {
       console.error('Fetch error:', err);
       setError(err.message);
