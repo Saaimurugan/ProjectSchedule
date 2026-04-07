@@ -6,6 +6,7 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
   const [sprintHistory, setSprintHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedSprint, setSelectedSprint] = useState(null);
 
   // Use sprint history from props
   useEffect(() => {
@@ -210,6 +211,148 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
           </div>
         </div>
       )}
+
+      {sprintHistory.length > 0 && (() => {
+        const dateMap = {
+          "2026-03-19": "AIML Sprint 39",
+          "2026-03-20": "AIML Sprint 39",
+          "2026-03-23": "AIML Sprint 39",
+          "2026-03-24": "AIML Sprint 40",
+          "2026-03-25": "AIML Sprint 40",
+          "2026-03-26": "AIML Sprint 40",
+          "2026-03-27": "AIML Sprint 40",
+          "2026-03-30": "AIML Sprint 40",
+          "2026-03-31": "AIML Sprint 40",
+          "2026-04-01": "AIML Sprint 40",
+          "2026-04-02": "AIML Sprint 40",
+          "2026-04-03": "AIML Sprint 40"
+        };
+
+        const getSprintName = (sprint) => {
+          const dateKey = sprint.date || sprint.timestamp?.split('T')[0];
+          if (dateMap[dateKey]) return dateMap[dateKey];
+          if (sprint.sprintName && !sprint.sprintName.startsWith('Sprint 20')) return sprint.sprintName;
+          return null;
+        };
+
+        const sprintGroups = {};
+        sprintHistory.forEach(sprint => {
+          const name = getSprintName(sprint);
+          if (!name) return;
+          if (!sprintGroups[name]) {
+            sprintGroups[name] = {
+              name,
+              velocity: 0,
+              completedTickets: 0,
+              productivity: 0,
+              onHoldTickets: 0,
+              count: 0,
+              latestTimestamp: sprint.timestamp
+            };
+          }
+          const current = sprintGroups[name];
+          if (new Date(sprint.timestamp) > new Date(current.latestTimestamp)) {
+            current.velocity = sprint.velocity || 0;
+            current.completedTickets = sprint.completedTickets || 0;
+            current.productivity = sprint.productivity || 0;
+            current.onHoldTickets = (sprint.ticketDetails || []).filter(t => {
+              const s = t.status?.toLowerCase() || '';
+              return s.includes('hold') || s.includes('blocked');
+            }).length;
+            current.latestTimestamp = sprint.timestamp;
+            current.completionRate = sprint.totalStoryPoints > 0
+              ? parseFloat(((sprint.completedStoryPoints / sprint.totalStoryPoints) * 100).toFixed(1))
+              : 0;
+          }
+        });
+
+        const uniqueSprints = Object.values(sprintGroups).reverse();
+
+        return (
+          <div className="sprint-detail-section">
+            <h3>Sprint Detail View</h3>
+            <div style={{ marginBottom: '1rem' }}>
+              <select
+                value={selectedSprint || ''}
+                onChange={(e) => setSelectedSprint(e.target.value)}
+                style={{ padding: '8px 16px', fontSize: '14px', borderRadius: '6px', border: '1px solid #ccc' }}
+              >
+                <option value="">Select a Sprint</option>
+                {uniqueSprints.map((sprint, index) => (
+                  <option key={index} value={sprint.name}>{sprint.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {selectedSprint && (() => {
+              const sprint = uniqueSprints.find(s => s.name === selectedSprint);
+              if (!sprint) return null;
+              const chartData = [{ name: sprint.name, ...sprint }];
+              return (
+                <div>
+                  <div className="chart-container">
+                    <h4>Velocity & Completion Rate</h4>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <ComposedChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis yAxisId="left" />
+                        <YAxis yAxisId="right" orientation="right" />
+                        <Tooltip />
+                        <Legend />
+                        <Bar yAxisId="left" dataKey="velocity" name="Velocity (Story Points)" fill="#1a56db" />
+                        <Line yAxisId="right" type="monotone" dataKey="completionRate" name="Completion Rate (%)" stroke="#16a34a" strokeWidth={2} dot={{ r: 5 }} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="chart-container">
+                    <h4>Team Productivity</h4>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="productivity" name="Productivity (%)" stroke="#7c3aed" strokeWidth={2} dot={{ r: 5 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="chart-container">
+                    <h4>Tickets Completed</h4>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <ComposedChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="completedTickets" name="Completed Tickets" fill="#16a34a" />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="chart-container">
+                    <h4>Tickets on Hold</h4>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <ComposedChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="onHoldTickets" name="Tickets on Hold" fill="#f59e0b" />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        );
+      })()}
     </div>
   );
 }
