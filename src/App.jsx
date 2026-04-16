@@ -6,6 +6,7 @@ import Charts from './components/Charts';
 import TicketList from './components/TicketList';
 import SprintTrends from './components/SprintTrends';
 import ResourceQuality from './components/ResourceQuality';
+import DeveloperAccordion from './components/DeveloperAccordion';
 import './App.css';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
   const [config, setConfig] = useState(null);
   const [currentSprintData, setCurrentSprintData] = useState(null);
   const [sprintHistory, setSprintHistory] = useState([]);
+  const [allEpics, setAllEpics] = useState([]);
   const [activeFilter, setActiveFilter] = useState({
     storyPoints: null,
     dueDate: null,
@@ -27,6 +29,7 @@ function App() {
   // Fetch sprint history on page load
   useEffect(() => {
     fetchSprintHistory();
+    fetchAllEpics();
   }, []);
 
   const fetchSprintHistory = async () => {
@@ -51,10 +54,34 @@ function App() {
       }
 
       if (parsedData.sprintHistory) {
+        window.__debug_sprintHistory = parsedData.sprintHistory;
         setSprintHistory(parsedData.sprintHistory);
       }
     } catch (err) {
       console.error('Error fetching sprint history:', err);
+    }
+  };
+
+  const fetchAllEpics = async () => {
+    try {
+      const response = await fetch("https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev/mps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jql: "project = CSAIM AND issuetype = Epic ORDER BY created DESC",
+          maxResults: 100
+        })
+      });
+      const raw = await response.json();
+      let parsed = raw;
+      if (typeof parsed === "string") parsed = JSON.parse(parsed);
+      if (parsed.body && typeof parsed.body === "string") parsed = JSON.parse(parsed.body);
+      
+      const epics = parsed.issues || [];
+      console.log("Total epics fetched:", epics.length);
+      setAllEpics(epics);
+    } catch (err) {
+      console.error("Error fetching epics:", err);
     }
   };
 
@@ -373,6 +400,7 @@ function App() {
             <Charts tickets={filteredTickets} />
             <SprintTrends currentSprintData={currentSprintData} sprintHistory={sprintHistory} />
             <ResourceQuality tickets={filteredTickets} />
+            <DeveloperAccordion tickets={filteredTickets} allEpics={allEpics} />
             <FilterCards
               tickets={tickets}
               filteredTickets={filteredTickets}
