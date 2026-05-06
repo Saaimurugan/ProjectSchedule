@@ -63,11 +63,35 @@ function DeveloperAccordion({ tickets, allEpics = [] }) {
     });
   };
 
+  const extractDescriptionText = (content) => {
+    if (!content) return '';
+    
+    let text = '';
+    
+    const traverse = (nodes) => {
+      if (!Array.isArray(nodes)) return;
+      
+      nodes.forEach(node => {
+        if (node.text) {
+          text += node.text;
+        }
+        if (node.content && Array.isArray(node.content)) {
+          traverse(node.content);
+        }
+      });
+    };
+    
+    traverse(content);
+    return text;
+  };
+
   const getValidationIssues = (ticket) => {
     const issues = [];
 
     // Rule 1: Description too short
-    const description = ticket.fields.description?.content?.[0]?.content?.[0]?.text || '';
+    const description = extractDescriptionText(ticket.fields.description?.content) || '';
+    console.log('Description length:', description.length);
+    console.log('Description:', description);
     if (description.length < 200) {
       issues.push('Description too short (min 200 characters)');
     }
