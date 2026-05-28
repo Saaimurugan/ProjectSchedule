@@ -2,190 +2,222 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar } from 'recharts';
 import './SprintTrends.css';
 
-// ─── DATE → SPRINT NAME MAP ───────────────────────────────────────────────────
-// Add any date keys here whose DynamoDB records were saved with date-based names.
-// Format: "YYYY-MM-DD": "Actual Sprint Name"
-const DATE_TO_SPRINT_NAME = {
-  "2026-03-19": "AIML Sprint 39",
-  "2026-03-20": "AIML Sprint 39",
-  "2026-03-23": "AIML Sprint 39",
-  "2026-03-24": "AIML Sprint 40",
-  "2026-03-25": "AIML Sprint 40",
-  "2026-03-26": "AIML Sprint 40",
-  "2026-03-27": "AIML Sprint 40",
-  "2026-03-30": "AIML Sprint 40",
-  "2026-03-31": "AIML Sprint 40",
-  "2026-04-01": "AIML Sprint 40",
-  "2026-04-02": "AIML Sprint 40",
-  "2026-04-03": "AIML Sprint 40",
-  // Add more as needed for any dates that saved with bad names:
-  // "2026-05-11": "AIML Sprint XX",
-  // "2026-05-13": "AIML Sprint XX",
-};
-
-// ─── INCOMPLETE SAVE THRESHOLDS ───────────────────────────────────────────────
-// Records with fewer tickets/points than these are partial saves (e.g. 20 May dip)
-const MIN_TICKETS = 5;
-const MIN_STORY_POINTS = 1;
-
 function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
   const [sprintHistory, setSprintHistory] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [selectedSprint, setSelectedSprint] = useState(null);
 
   useEffect(() => {
     if (sprintHistoryProp && sprintHistoryProp.length > 0) {
-      console.log('Raw sprint history received:', sprintHistoryProp.length, 'records');
-
-      const sorted = [...sprintHistoryProp].sort(
-        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+      const sortedData = [...sprintHistoryProp].sort((a, b) =>
+        new Date(a.timestamp) - new Date(b.timestamp)
       );
-
-      // ── FIX: Filter out incomplete saves (the 20 May dip) ──────────────────
-      const filtered = sorted.filter(s => {
-        const tickets = s.totalTickets || s.completedTickets || 0;
-        const points  = s.totalStoryPoints || s.totalPoints || 0;
-        return tickets >= MIN_TICKETS || points >= MIN_STORY_POINTS;
-      });
-
-      console.log(`After filtering incomplete saves: ${filtered.length} records remain`);
-      setSprintHistory(filtered);
+      setSprintHistory(sortedData);
       setLoading(false);
     } else {
-      console.log('No sprint history available');
       setSprintHistory([]);
       setLoading(false);
     }
   }, [sprintHistoryProp]);
 
-  // ─── CENTRAL NAME RESOLVER ─────────────────────────────────────────────────
-  // Called everywhere a sprint label is needed — both in charts and detail view.
+  // Resolve sprint name — never use date-based labels
   const resolveSprintName = (sprint) => {
-    // 1. Try the date-map first (fixes old bad DynamoDB records)
-    const dateKey = sprint.timestamp?.split('T')[0] || sprint.date;
-    if (dateKey && DATE_TO_SPRINT_NAME[dateKey]) {
-      return DATE_TO_SPRINT_NAME[dateKey];
+    const name = sprint.sprintName || sprint.sprintId || '';
+    if (name && !name.match(/^Sprint \d{4}-\d{2}-\d{2}$/)) return name;
+    if (sprint.customSprintName) return sprint.customSprintName;
+    if (sprint.timestamp) {
+      const d = new Date(sprint.timestamp);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
     }
-
-    // 2. If sprintName looks like a real Jira sprint name (not a date fallback), use it
-    const name = sprint.sprintName || '';
-    if (name && !name.match(/^Sprint \d{4}-\d{2}-\d{2}$/)) {
-      return name;
-    }
-
-    // 3. Last resort — we have no good name; use sprintId if it looks real
-    if (sprint.sprintId && !sprint.sprintId.startsWith('sprint-')) {
-      return sprint.sprintId;
-    }
-
-    // 4. Absolute fallback — still better than a raw ISO date
-    return `Sprint (${dateKey || 'unknown'})`;
+    return 'Unknown Sprint';
   };
 
-  // ─── FORMAT DATA FOR MAIN TREND CHARTS ────────────────────────────────────
-  // Deduplicates by resolved sprint name, keeping the latest record per sprint.
-  const formatChartData = () => {
-    // Step 1: resolve names and deduplicate — keep latest record per sprint name
-    const byName = {};
-    sprintHistory.forEach(sprint => {
-      const name = resolveSprintName(sprint); // ← FIX: applied here, not just in detail view
-      if (!byName[name] || new Date(sprint.timestamp) > new Date(byName[name].timestamp)) {
-        byName[name] = { ...sprint, resolvedName: name };
+  // Get Monday of the week for a given date
+  const getMondayOfWeek = (date) => {
+    const d = new Date(date);
+    const day = d.getDay(); // 0=Sun, 1=Mon...
+    const diff = (day === 0) ? -6 : 1 - day; // adjust to Monday
+    d.setDate(d.getDate() + diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  // Format date as "18 May"
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  };
+
+  // Group daily records into weekly buckets (Mon–Sun), average values
+  const groupIntoWeeks = (records) => {
+    if (!records || records.length === 0) return [];
+
+    // Build a map: weekKey (Monday ISO date) → array of daily records
+    const weekMap = {};
+
+    records.forEach(record => {
+      const recordDate = new Date(record.timestamp || record.date);
+      const monday = getMondayOfWeek(recordDate);
+      const weekKey = monday.toISOString().split('T')[0];
+
+      if (!weekMap[weekKey]) {
+        weekMap[weekKey] = {
+          monday,
+          records: []
+        };
       }
+      weekMap[weekKey].records.push(record);
     });
 
-    // Step 2: sort by timestamp of the kept record
-    const deduped = Object.values(byName).sort(
-      (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
-    );
+    // Sort weeks chronologically
+    const sortedWeeks = Object.values(weekMap).sort((a, b) => a.monday - b.monday);
 
-    // Step 3: filter clearly bad velocity data (keeps real 100+ ticket sprints)
-    const clean = deduped.filter(s => {
-      const velocity = s.velocity || s.completedPoints || 0;
-      return velocity <= 500;
-    });
+    // Label weeks as Week 1, Week 2...
+    return sortedWeeks.map((week, idx) => {
+      const recs = week.records;
+      const count = recs.length;
 
-    return clean.map(sprint => {
-      const totalSP     = sprint.totalStoryPoints || sprint.totalPoints || 0;
-      const completedSP = sprint.completedStoryPoints || sprint.completedPoints || sprint.velocity || 0;
-      const completionRate = totalSP > 0
-        ? parseFloat(((completedSP / totalSP) * 100).toFixed(1))
+      // Calculate Friday of this week
+      const friday = new Date(week.monday);
+      friday.setDate(friday.getDate() + 4);
+
+      // Average all daily values
+      const avg = (key) => {
+        const vals = recs.map(r => Number(r[key] || 0)).filter(v => !isNaN(v));
+        return vals.length > 0 ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1)) : 0;
+      };
+
+      // For completionRate, calculate from averaged SP values
+      const avgTotalSP = avg('totalStoryPoints');
+      const avgCompletedSP = avg('completedStoryPoints');
+      const completionRate = avgTotalSP > 0
+        ? parseFloat(((avgCompletedSP / avgTotalSP) * 100).toFixed(1))
         : 0;
 
-      const onHoldTickets = (sprint.ticketDetails || []).filter(t => {
-        const s = t.status?.toLowerCase() || '';
-        return s.includes('hold') || s.includes('blocked');
-      }).length;
+      // On hold: average from ticketDetails across all days in week
+      const onHoldAvg = recs.reduce((sum, r) => {
+        const holds = (r.ticketDetails || []).filter(t => {
+          const s = t.status?.toLowerCase() || '';
+          return s.includes('hold') || s.includes('blocked');
+        }).length;
+        return sum + holds;
+      }, 0) / count;
+
+      const label = `${formatDate(week.monday)}-${formatDate(friday)})`;
 
       return {
-        name: sprint.resolvedName,   // ← always a proper sprint name now
-        productivity:     sprint.productivity || 0,
-        velocity:         sprint.velocity || 0,
-        bugs:             sprint.bugCount || 0,
-        completedBugs:    sprint.completedBugCount || 0,
-        completionRate,              // always a number
-        completedTickets: sprint.completedTickets || 0,
-        onHoldTickets,
+        name: label,
+        weekStart: week.monday,
+        weekEnd: friday,
+        daysInWeek: count,
+        velocity: avg('velocity'),
+        completionRate,
+        productivity: avg('productivity'),
+        bugs: avg('bugCount'),
+        completedBugs: avg('completedBugCount'),
+        completedTickets: avg('completedTickets'),
+        onHoldTickets: parseFloat(onHoldAvg.toFixed(1))
       };
     });
   };
 
-  // ─── SPRINT DETAIL DATA (reuses same dedup logic) ─────────────────────────
-  const getDetailSprints = () => {
-    const byName = {};
-    sprintHistory.forEach(sprint => {
-      const name = resolveSprintName(sprint);
-      if (!byName[name] || new Date(sprint.timestamp) > new Date(byName[name].timestamp)) {
-        byName[name] = { ...sprint, resolvedName: name };
-      }
+const formatWeeklyChartData = () => {
+    // Use ALL records regardless of sprint name — includes old date-based records too
+    const validRecords = sprintHistory.filter(s => s.timestamp || s.date);
+    if (validRecords.length === 0) return [];
+
+    // Group purely by Mon–Sun calendar week
+    const weekMap = {};
+    validRecords.forEach(record => {
+      const recordDate = new Date(record.timestamp || record.date);
+      const monday = getMondayOfWeek(recordDate);
+      const weekKey = monday.toISOString().split('T')[0];
+      if (!weekMap[weekKey]) weekMap[weekKey] = { monday, records: [] };
+      weekMap[weekKey].records.push(record);
     });
 
-    return Object.values(byName)
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)) // newest first for dropdown
-      .map(sprint => {
-        const totalSP     = sprint.totalStoryPoints || sprint.totalPoints || 0;
-        const completedSP = sprint.completedStoryPoints || sprint.completedPoints || sprint.velocity || 0;
-        const completionRate = totalSP > 0
-          ? parseFloat(((completedSP / totalSP) * 100).toFixed(1))
+    // Sort chronologically, take last 10 weeks
+    const last10 = Object.values(weekMap)
+      .sort((a, b) => a.monday - b.monday)
+      .slice(-10);
+
+    return last10.map((week, idx) => {
+      const recs = week.records;
+      const count = recs.length;
+      const friday = new Date(week.monday);
+      friday.setDate(friday.getDate() + 4);
+
+      const avg = (key) => {
+        const vals = recs.map(r => Number(r[key] || 0)).filter(v => !isNaN(v));
+        return vals.length > 0
+          ? parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1))
           : 0;
-        const onHoldTickets = (sprint.ticketDetails || []).filter(t => {
+      };
+
+      const avgTotalSP = avg('totalStoryPoints');
+      const avgCompletedSP = avg('completedStoryPoints');
+      const completionRate = avgTotalSP > 0
+        ? parseFloat(((avgCompletedSP / avgTotalSP) * 100).toFixed(1))
+        : 0;
+
+      const onHoldAvg = recs.reduce((sum, r) => {
+        const holds = (r.ticketDetails || []).filter(t => {
           const s = t.status?.toLowerCase() || '';
           return s.includes('hold') || s.includes('blocked');
         }).length;
+        return sum + holds;
+      }, 0) / count;
 
-        return {
-          name:             sprint.resolvedName,
-          velocity:         sprint.velocity || 0,
-          completedTickets: sprint.completedTickets || 0,
-          productivity:     sprint.productivity || 0,
-          onHoldTickets,
-          completionRate,
-        };
-      });
+      // Show sprint name in label if whole week belongs to one sprint
+      const sprintNames = [...new Set(recs.map(r => resolveSprintName(r)))];
+      const sprintLabel = sprintNames.length === 1 ? ` · ${sprintNames[0]}` : '';
+
+      return {
+        name: `${formatDate(week.monday)}-${formatDate(friday)}${sprintLabel}`,
+        weekStart: week.monday,
+        weekEnd: friday,
+        daysInWeek: count,
+        velocity: avg('velocity'),
+        completionRate,
+        productivity: avg('productivity'),
+        bugs: avg('bugCount'),
+        completedBugs: avg('completedBugCount'),
+        completedTickets: avg('completedTickets'),
+        onHoldTickets: parseFloat(onHoldAvg.toFixed(1))
+      };
+    });
+  };
+
+  const chartData = formatWeeklyChartData();
+
+  // Get unique sprint names for dropdown
+  const getUniqueSprints = () => {
+    const sprintGroups = {};
+    sprintHistory.forEach(record => {
+      const name = resolveSprintName(record);
+      if (name === 'Unknown Sprint') return;
+      if (!sprintGroups[name]) sprintGroups[name] = [];
+      sprintGroups[name].push(record);
+    });
+    return Object.entries(sprintGroups)
+      .map(([name, records]) => ({
+        name,
+        weeks: groupIntoWeeks(records)
+      }))
+      .reverse();
   };
 
   if (loading && sprintHistory.length === 0) {
     return <div className="sprint-trends loading">Loading sprint history...</div>;
   }
 
-  const chartData    = formatChartData();
-  const detailSprints = getDetailSprints();
-
   return (
     <div className="sprint-trends">
       <div className="sprint-trends-header">
-        <h2>Sprint Trends (Last 10 Sprints)</h2>
+        <h2>Sprint Trends (Weekly View)</h2>
         <div className="header-info">
-          <span className="info-badge">Auto-saved daily when tickets are loaded</span>
+          <span className="info-badge">Auto-saved daily · Grouped by week (Mon–Sun)</span>
         </div>
       </div>
-
-      {error && (
-        <div className="error-message">
-          Error: {error}. Make sure the Lambda function is deployed and DynamoDB is configured.
-        </div>
-      )}
 
       {sprintHistory.length === 0 && !loading && (
         <div className="no-data-message">
@@ -196,29 +228,40 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
       {chartData.length > 0 && (
         <div className="trends-grid">
 
-          {/* ── Velocity & Completion Rate ──────────────────────────────────── */}
+          {/* Velocity & Completion Rate */}
           <div className="trend-card full-width">
             <h3>Velocity & Completion Rate Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                <YAxis yAxisId="left"  orientation="left"  stroke="#0052cc" />
+                <YAxis yAxisId="left" orientation="left" stroke="#0052cc" />
                 <YAxis yAxisId="right" orientation="right" stroke="#00875a" domain={[0, 100]} />
-                <Tooltip />
+                <Tooltip
+                  formatter={(value, name) => [
+                    name === 'Completion Rate (%)' ? `${value}%` : value,
+                    name
+                  ]}
+                />
                 <Legend />
-                <Bar  yAxisId="left"  dataKey="velocity"       fill="#0052cc" name="Velocity (Story Points)" />
-                <Line yAxisId="right" type="monotone" dataKey="completionRate" stroke="#00875a"
-                  strokeWidth={3} name="Completion Rate (%)" dot={{ fill: '#00875a', r: 5 }} />
+                <Bar yAxisId="left" dataKey="velocity" fill="#0052cc" name="Velocity (Story Points)" />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="completionRate"
+                  stroke="#00875a"
+                  strokeWidth={3}
+                  name="Completion Rate (%)"
+                  dot={{ fill: '#00875a', r: 5 }}
+                />
               </ComposedChart>
             </ResponsiveContainer>
             <div className="chart-inference">
-              <strong>What to Infer?</strong> Track team velocity (completed story points) and completion rate over time.
-              Consistent or increasing velocity indicates stable team performance. Completion rate shows planning accuracy.
+              <strong>What to Infer?</strong> Weekly average of completed story points and completion rate. Each bar represents the average velocity across all days recorded in that week.
             </div>
           </div>
 
-          {/* ── Bug Trend ───────────────────────────────────────────────────── */}
+          {/* Bug Trend */}
           <div className="trend-card full-width">
             <h3>Bug Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -228,19 +271,24 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar  dataKey="bugs"          fill="#bf2600" name="Total Bugs" />
-                <Bar  dataKey="completedBugs" fill="#00875a" name="Completed Bugs" />
-                <Line type="monotone" dataKey="bugs" stroke="#bf2600"
-                  strokeWidth={2} name="Bug Trend" dot={{ fill: '#bf2600', r: 4 }} />
+                <Bar dataKey="bugs" fill="#bf2600" name="Total Bugs" />
+                <Bar dataKey="completedBugs" fill="#00875a" name="Completed Bugs" />
+                <Line
+                  type="monotone"
+                  dataKey="bugs"
+                  stroke="#bf2600"
+                  strokeWidth={2}
+                  name="Bug Trend"
+                  dot={{ fill: '#bf2600', r: 4 }}
+                />
               </ComposedChart>
             </ResponsiveContainer>
             <div className="chart-inference">
-              <strong>What to Infer?</strong> Monitor bug creation and resolution trends.
-              Increasing bug count may indicate quality issues. Green bars show bug resolution effectiveness.
+              <strong>What to Infer?</strong> Weekly average bug count and resolution. Increasing trend may indicate quality issues.
             </div>
           </div>
 
-          {/* ── Team Productivity ───────────────────────────────────────────── */}
+          {/* Team Productivity */}
           <div className="trend-card full-width">
             <h3>Team Productivity Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -248,19 +296,24 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
                 <YAxis domain={[0, 100]} />
-                <Tooltip />
+                <Tooltip formatter={(v) => [`${v}%`, 'Productivity']} />
                 <Legend />
-                <Line type="monotone" dataKey="productivity" stroke="#6554c0"
-                  strokeWidth={3} name="Productivity (%)" dot={{ fill: '#6554c0', r: 5 }} />
+                <Line
+                  type="monotone"
+                  dataKey="productivity"
+                  stroke="#6554c0"
+                  strokeWidth={3}
+                  name="Productivity (%)"
+                  dot={{ fill: '#6554c0', r: 5 }}
+                />
               </LineChart>
             </ResponsiveContainer>
             <div className="chart-inference">
-              <strong>What to Infer?</strong> Overall team productivity percentage over sprints.
-              Consistent high productivity indicates effective sprint planning and execution.
+              <strong>What to Infer?</strong> Weekly average team productivity percentage. Consistent high productivity indicates effective sprint execution.
             </div>
           </div>
 
-          {/* ── Tickets Completed ───────────────────────────────────────────── */}
+          {/* Tickets Completed */}
           <div className="trend-card full-width">
             <h3>Tickets Completed Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -270,18 +323,23 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar  dataKey="completedTickets" fill="#00875a" name="Completed Tickets" />
-                <Line type="monotone" dataKey="completedTickets" stroke="#00875a"
-                  strokeWidth={2} name="Completion Trend" dot={{ fill: '#00875a', r: 4 }} />
+                <Bar dataKey="completedTickets" fill="#00875a" name="Completed Tickets (avg)" />
+                <Line
+                  type="monotone"
+                  dataKey="completedTickets"
+                  stroke="#00875a"
+                  strokeWidth={2}
+                  name="Completion Trend"
+                  dot={{ fill: '#00875a', r: 4 }}
+                />
               </ComposedChart>
             </ResponsiveContainer>
             <div className="chart-inference">
-              <strong>What to Infer?</strong> Track the number of tickets completed per sprint.
-              Consistent or increasing completion indicates steady team throughput and delivery capacity.
+              <strong>What to Infer?</strong> Average tickets completed per week. Steady or increasing bars indicate healthy delivery pace.
             </div>
           </div>
 
-          {/* ── Tickets on Hold ─────────────────────────────────────────────── */}
+          {/* Tickets on Hold */}
           <div className="trend-card full-width">
             <h3>Tickets on Hold Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -291,21 +349,26 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar  dataKey="onHoldTickets" fill="#ff991f" name="Tickets on Hold" />
-                <Line type="monotone" dataKey="onHoldTickets" stroke="#ff991f"
-                  strokeWidth={2} name="On Hold Trend" dot={{ fill: '#ff991f', r: 4 }} />
+                <Bar dataKey="onHoldTickets" fill="#ff991f" name="Tickets on Hold (avg)" />
+                <Line
+                  type="monotone"
+                  dataKey="onHoldTickets"
+                  stroke="#ff991f"
+                  strokeWidth={2}
+                  name="On Hold Trend"
+                  dot={{ fill: '#ff991f', r: 4 }}
+                />
               </ComposedChart>
             </ResponsiveContainer>
             <div className="chart-inference">
-              <strong>What to Infer?</strong> Monitor tickets that are blocked or on hold.
-              Increasing trend may indicate dependencies, blockers, or process bottlenecks that need attention.
+              <strong>What to Infer?</strong> Average on-hold tickets per week. Increasing trend may indicate blockers or dependencies.
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Sprint Detail View ───────────────────────────────────────────────── */}
-      {detailSprints.length > 0 && (
+      {/* Sprint Detail View */}
+      {getUniqueSprints().length > 0 && (
         <div className="sprint-detail-section">
           <h3>Sprint Detail View</h3>
           <div style={{ marginBottom: '1rem' }}>
@@ -315,74 +378,74 @@ function SprintTrends({ currentSprintData, sprintHistory: sprintHistoryProp }) {
               style={{ padding: '8px 16px', fontSize: '14px', borderRadius: '6px', border: '1px solid #ccc' }}
             >
               <option value="">Select a Sprint</option>
-              {detailSprints.map((sprint, index) => (
-                <option key={index} value={sprint.name}>{sprint.name}</option>
+              {getUniqueSprints().map((sprint, idx) => (
+                <option key={idx} value={sprint.name}>{sprint.name}</option>
               ))}
             </select>
           </div>
 
           {selectedSprint && (() => {
-            const sprint = detailSprints.find(s => s.name === selectedSprint);
-            if (!sprint) return null;
-            const chartData = [{ name: sprint.name, ...sprint }];
+            const sprint = getUniqueSprints().find(s => s.name === selectedSprint);
+            if (!sprint || sprint.weeks.length === 0) return (
+              <div style={{ color: '#666', fontSize: '14px' }}>No weekly data available for this sprint.</div>
+            );
+
             return (
               <div>
                 <div className="chart-container">
-                  <h4>Velocity & Completion Rate</h4>
+                  <h4>Velocity & Completion Rate — {selectedSprint}</h4>
                   <ResponsiveContainer width="100%" height={300}>
-                    <ComposedChart data={chartData}>
+                    <ComposedChart data={sprint.weeks}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
+                      <XAxis dataKey="name" angle={-30} textAnchor="end" height={80} />
                       <YAxis yAxisId="left" />
                       <YAxis yAxisId="right" orientation="right" domain={[0, 100]} />
                       <Tooltip />
                       <Legend />
-                      <Bar  yAxisId="left"  dataKey="velocity"       name="Velocity (Story Points)" fill="#1a56db" />
-                      <Line yAxisId="right" type="monotone" dataKey="completionRate"
-                        name="Completion Rate (%)" stroke="#16a34a" strokeWidth={2} dot={{ r: 5 }} />
+                      <Bar yAxisId="left" dataKey="velocity" name="Velocity (Story Points)" fill="#1a56db" />
+                      <Line yAxisId="right" type="monotone" dataKey="completionRate" name="Completion Rate (%)" stroke="#16a34a" strokeWidth={2} dot={{ r: 5 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="chart-container">
-                  <h4>Team Productivity</h4>
+                  <h4>Team Productivity — {selectedSprint}</h4>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={chartData}>
+                    <LineChart data={sprint.weeks}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
+                      <XAxis dataKey="name" angle={-30} textAnchor="end" height={80} />
                       <YAxis domain={[0, 100]} />
                       <Tooltip />
                       <Legend />
-                      <Line type="monotone" dataKey="productivity" name="Productivity (%)"
-                        stroke="#7c3aed" strokeWidth={2} dot={{ r: 5 }} />
+                      <Line type="monotone" dataKey="productivity" name="Productivity (%)" stroke="#7c3aed" strokeWidth={2} dot={{ r: 5 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="chart-container">
-                  <h4>Tickets Completed</h4>
+                  <h4>Tickets Completed — {selectedSprint}</h4>
                   <ResponsiveContainer width="100%" height={300}>
-                    <ComposedChart data={chartData}>
+                    <ComposedChart data={sprint.weeks}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
+                      <XAxis dataKey="name" angle={-30} textAnchor="end" height={80} />
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="completedTickets" name="Completed Tickets" fill="#16a34a" />
+                      <Bar dataKey="completedTickets" name="Completed Tickets (avg)" fill="#16a34a" />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
 
                 <div className="chart-container">
-                  <h4>Tickets on Hold</h4>
+                  <h4>Tickets on Hold — {selectedSprint}</h4>
                   <ResponsiveContainer width="100%" height={300}>
-                    <ComposedChart data={chartData}>
+                    <ComposedChart data={sprint.weeks}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
+                      <XAxis dataKey="name" angle={-30} textAnchor="end" height={80} />
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="onHoldTickets" name="Tickets on Hold" fill="#f59e0b" />
+                      <Bar dataKey="onHoldTickets" name="Tickets on Hold (avg)" fill="#f59e0b" />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>

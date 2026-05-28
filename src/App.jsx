@@ -26,7 +26,6 @@ function App() {
     statuses: []
   });
 
-  // Fetch sprint history on page load
   useEffect(() => {
     fetchSprintHistory();
     fetchAllEpics();
@@ -36,16 +35,13 @@ function App() {
     try {
       const response = await fetch('https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev/mps', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ jql: '' }), // Empty JQL to get only sprint history
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jql: '' }),
       });
 
       const rawText = await response.text();
       let parsedData = JSON.parse(rawText);
 
-      // Handle API Gateway response structure
       if (parsedData.body && typeof parsedData.body === 'string') {
         parsedData = JSON.parse(parsedData.body);
       }
@@ -76,7 +72,7 @@ function App() {
       let parsed = raw;
       if (typeof parsed === "string") parsed = JSON.parse(parsed);
       if (parsed.body && typeof parsed.body === "string") parsed = JSON.parse(parsed.body);
-      
+
       const epics = parsed.issues || [];
       console.log("Total epics fetched:", epics.length);
       setAllEpics(epics);
@@ -90,9 +86,7 @@ function App() {
     setError(null);
 
     try {
-      const requestBody = {
-        jql: jiraConfig.jql
-      };
+      const requestBody = { jql: jiraConfig.jql };
 
       const response = await fetch("https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev/mps", {
         method: "POST",
@@ -113,7 +107,6 @@ function App() {
       });
 
       const allIssues = parsed.issues || [];
-      window.__debug_tickets = allIssues;
       setTickets(allIssues);
       setFilteredTickets(allIssues);
       setConfig(jiraConfig);
@@ -125,12 +118,10 @@ function App() {
         statuses: []
       });
 
-      // Store sprint history if included in response
       if (parsed.sprintHistory) {
         setSprintHistory(parsed.sprintHistory);
       }
 
-      // Store story points field ID for later use
       if (parsed.storyPointsFieldId) {
         window.storyPointsFieldId = parsed.storyPointsFieldId;
       }
@@ -144,7 +135,6 @@ function App() {
     }
   };
 
-  // Calculate current sprint data whenever tickets change
   useEffect(() => {
     if (tickets.length > 0) {
       const sprintData = calculateSprintData(tickets);
@@ -154,8 +144,7 @@ function App() {
 
   const getStoryPointValue = (issue) => {
     const val = issue?.fields?.customfield_10033;
-    const points = (val !== null && val !== undefined) ? Number(val) : 0;
-    return points;
+    return (val !== null && val !== undefined) ? Number(val) : 0;
   };
 
   const getEpicName = (ticket) => {
@@ -165,6 +154,35 @@ function App() {
       fields.epic?.name ||
       fields.parent?.fields?.summary ||
       'No Epic';
+  };
+
+  // FIX: Robust sprint name extractor — never falls back to today's date
+  const extractSprintName = (ticketList, fallbackConfig) => {
+    for (const ticket of ticketList) {
+      const sprintField = ticket.fields?.customfield_10020;
+      if (Array.isArray(sprintField) && sprintField.length > 0) {
+        // Priority: active → closed → future → any
+        const sprint =
+          sprintField.find(s => s.state === 'active') ||
+          sprintField.find(s => s.state === 'closed') ||
+          sprintField.find(s => s.state === 'future') ||
+          sprintField[0];
+        if (sprint?.name) {
+          console.log('Sprint name detected from customfield_10020:', sprint.name);
+          return sprint.name;
+        }
+      }
+    }
+    // Fallback: extract sprint name from JQL if it contains sprint = "..."
+    if (fallbackConfig?.jql) {
+      const match = fallbackConfig.jql.match(/sprint\s*=\s*["']([^"']+)["']/i);
+      if (match) {
+        console.log('Sprint name extracted from JQL:', match[1]);
+        return match[1];
+      }
+    }
+    // Last resort: use config sprint name but NEVER use today's date
+    return fallbackConfig?.sprintName || 'Unknown Sprint';
   };
 
   const calculateSprintData = (ticketList) => {
@@ -186,47 +204,36 @@ function App() {
       const epic = getEpicName(ticket);
       const dueDate = ticket.fields.duedate || null;
 
-      if (assignee !== 'Unassigned') {
-        uniqueAssignees.add(assignee);
-      }
+      if (assignee !== 'Unassigned') uniqueAssignees.add(assignee);
 
       totalStoryPoints += points;
-
-      if (isCompleted) {
-        completedStoryPoints += points;
-      }
+      if (isCompleted) completedStoryPoints += points;
 
       if (isBug) {
         bugCount++;
-        if (isCompleted) {
-          completedBugCount++;
-        }
+        if (isCompleted) completedBugCount++;
       }
 
-      // Check if overdue
       if (dueDate) {
         const dueDateObj = new Date(dueDate);
         dueDateObj.setHours(0, 0, 0, 0);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        if (dueDateObj < today && !isCompleted) {
-          overdueTickets++;
-        }
+        if (dueDateObj < today && !isCompleted) overdueTickets++;
       }
 
-      // Add ticket details for storage
       ticketDetails.push({
         ticketId: ticket.key,
         resourceName: assignee,
         storyPoints: points,
         storyPointsCompleted: isCompleted ? points : 0,
-        epic: epic,
+        epic,
         date: dueDate,
         status: ticket.fields.status?.name || 'Unknown',
         issueType: ticket.fields.issuetype?.name || 'Unknown',
         summary: ticket.fields.summary || '',
-        isCompleted: isCompleted,
-        isBug: isBug
+        isCompleted,
+        isBug
       });
     });
 
@@ -234,18 +241,12 @@ function App() {
       ? ((completedStoryPoints / totalStoryPoints) * 100).toFixed(1)
       : 0;
 
+    // FIX: use extractSprintName — never produces a date-based label
+    const sprintName = extractSprintName(ticketList, config);
+
     return {
       sprintId: `sprint-${Date.now()}`,
-      sprintName: (() => {
-        for (const ticket of ticketList) {
-          const sprintField = ticket.fields?.customfield_10020;
-          if (Array.isArray(sprintField) && sprintField.length > 0) {
-            const activeSprint = sprintField.find(s => s.state === 'active') || sprintField[0];
-            if (activeSprint?.name) return activeSprint.name;
-          }
-        }
-        return config?.sprintName || `Sprint ${new Date().toISOString().split('T')[0]}`;
-      })(),
+      sprintName,
       startDate: new Date().toISOString(),
       endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
       totalStoryPoints,
@@ -261,7 +262,7 @@ function App() {
       }).length,
       productivity: parseFloat(productivity),
       overdueTickets,
-      ticketDetails: ticketDetails
+      ticketDetails
     };
   };
 
@@ -287,73 +288,51 @@ function App() {
     } else if (filter.type === 'assignee') {
       const assignees = [...newFilter.assignees];
       const index = assignees.indexOf(filter.value);
-      if (index > -1) {
-        assignees.splice(index, 1);
-      } else {
-        assignees.push(filter.value);
-      }
+      if (index > -1) assignees.splice(index, 1);
+      else assignees.push(filter.value);
       newFilter.assignees = assignees;
     } else if (filter.type === 'epic') {
       const epics = [...newFilter.epics];
       const index = epics.indexOf(filter.value);
-      if (index > -1) {
-        epics.splice(index, 1);
-      } else {
-        epics.push(filter.value);
-      }
+      if (index > -1) epics.splice(index, 1);
+      else epics.push(filter.value);
       newFilter.epics = epics;
     } else if (filter.type === 'status') {
       const statuses = [...newFilter.statuses];
       const index = statuses.indexOf(filter.value);
-      if (index > -1) {
-        statuses.splice(index, 1);
-      } else {
-        statuses.push(filter.value);
-      }
+      if (index > -1) statuses.splice(index, 1);
+      else statuses.push(filter.value);
       newFilter.statuses = statuses;
     }
 
     setActiveFilter(newFilter);
 
-    // Apply all filters
     let filtered = [...tickets];
 
-    // Story points filter
     if (newFilter.storyPoints) {
       if (newFilter.storyPoints === 'with') {
         filtered = filtered.filter(t => {
           const fields = t.fields;
-          return fields.customfield_10058 ||
-            fields.customfield_10202 ||
-            fields.customfield_10005 ||
-            fields.customfield_10308 ||
-            fields.customfield_10016 ||
-            fields.customfield_10026 ||
-            fields.customfield_10036 ||
-            fields.customfield_10106 ||
-            fields.customfield_10002 ||
-            fields.customfield_10004 ||
+          return fields.customfield_10058 || fields.customfield_10202 ||
+            fields.customfield_10005 || fields.customfield_10308 ||
+            fields.customfield_10016 || fields.customfield_10026 ||
+            fields.customfield_10036 || fields.customfield_10106 ||
+            fields.customfield_10002 || fields.customfield_10004 ||
             fields.storyPoints;
         });
       } else {
         filtered = filtered.filter(t => {
           const fields = t.fields;
-          return !(fields.customfield_10058 ||
-            fields.customfield_10202 ||
-            fields.customfield_10005 ||
-            fields.customfield_10308 ||
-            fields.customfield_10016 ||
-            fields.customfield_10026 ||
-            fields.customfield_10036 ||
-            fields.customfield_10106 ||
-            fields.customfield_10002 ||
-            fields.customfield_10004 ||
+          return !(fields.customfield_10058 || fields.customfield_10202 ||
+            fields.customfield_10005 || fields.customfield_10308 ||
+            fields.customfield_10016 || fields.customfield_10026 ||
+            fields.customfield_10036 || fields.customfield_10106 ||
+            fields.customfield_10002 || fields.customfield_10004 ||
             fields.storyPoints);
         });
       }
     }
 
-    // Due date filter
     if (newFilter.dueDate) {
       if (newFilter.dueDate === 'with') {
         filtered = filtered.filter(t => t.fields.duedate);
@@ -362,7 +341,6 @@ function App() {
       }
     }
 
-    // Assignee filter (multi-select)
     if (newFilter.assignees.length > 0) {
       filtered = filtered.filter(t => {
         const ticketAssignee = t.fields.assignee?.displayName || 'Unassigned';
@@ -370,7 +348,6 @@ function App() {
       });
     }
 
-    // Epic filter (multi-select)
     if (newFilter.epics.length > 0) {
       filtered = filtered.filter(t => {
         const epic = t.fields.customfield_10014?.name ||
@@ -382,7 +359,6 @@ function App() {
       });
     }
 
-    // Status filter (multi-select)
     if (newFilter.statuses.length > 0) {
       filtered = filtered.filter(t =>
         newFilter.statuses.includes(t.fields.status?.name)
@@ -410,7 +386,6 @@ function App() {
             <Charts tickets={filteredTickets} />
             <SprintTrends currentSprintData={currentSprintData} sprintHistory={sprintHistory} />
             <ResourceQuality tickets={filteredTickets} />
-            {(() => { window.__debug_filtered = filteredTickets; return null; })()}
             <DeveloperAccordion tickets={filteredTickets} allEpics={allEpics} />
             <FilterCards
               tickets={tickets}

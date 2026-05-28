@@ -132,24 +132,27 @@ function DeveloperAccordion({ tickets, allEpics = [] }) {
       issues.push('Epic not assigned. Please add an epic to this ticket');
     }
 
-    // Rule 6: CS-Time Savings and Time Savings Achieved validation
-    const csTimeSavings = ticket.fields?.customfield_10120;
-    const timeSavingsAchieved = ticket.fields?.customfield_10424;
+    // Rule 6: CS-Time Savings validation — ONLY for Done tickets
+    const isDone = status.toLowerCase().includes('done');
+    if (isDone) {
+      const csTimeSavings = ticket.fields?.customfield_10120;
+      const timeSavingsAchieved = ticket.fields?.customfield_10424;
 
-    const missingTimeFields = [];
-    if (csTimeSavings === null || csTimeSavings === undefined) {
-      missingTimeFields.push('CS-Time Savings (Per Month)');
-    }
-    if (timeSavingsAchieved === null || timeSavingsAchieved === undefined) {
-      missingTimeFields.push('Time Savings Achieved');
-    }
+      const missingTimeFields = [];
+      if (csTimeSavings === null || csTimeSavings === undefined) {
+        missingTimeFields.push('CS-Time Savings (Per Month)');
+      }
+      if (timeSavingsAchieved === null || timeSavingsAchieved === undefined) {
+        missingTimeFields.push('Time Savings Achieved');
+      }
 
-    if (missingTimeFields.length > 0) {
-      issues.push(`Missing required fields: ${missingTimeFields.join(', ')}`);
-    } else if (Number(csTimeSavings) !== Number(timeSavingsAchieved)) {
-      issues.push(
-        `Time Savings mismatch: CS-Time Savings (${csTimeSavings}) does not match Time Savings Achieved (${timeSavingsAchieved})`
-      );
+      if (missingTimeFields.length > 0) {
+        issues.push(`Missing required fields: ${missingTimeFields.join(', ')}`);
+      } else if (Number(csTimeSavings) !== Number(timeSavingsAchieved)) {
+        issues.push(
+          `Time Savings mismatch: CS-Time Savings (${csTimeSavings}) does not match Time Savings Achieved (${timeSavingsAchieved})`
+        );
+      }
     }
 
     return issues;
