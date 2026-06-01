@@ -70,25 +70,30 @@ function Charts({ tickets }) {
   };
 
   // Chart 2: Due Date Distribution
-  const dueDateData = () => {
-    const distribution = {};
-
-    tickets.forEach(ticket => {
-      const status = getDueDateStatus(ticket.fields.duedate);
-      if (!distribution[status]) {
-        distribution[status] = { count: 0, points: 0 };
-      }
-      distribution[status].count++;
-      distribution[status].points += getStoryPointValue(ticket);
-    });
-
-    return Object.entries(distribution).map(([status, data]) => ({
-      status,
-      tickets: data.count,
-      storyPoints: data.points
-    }));
+const dueDateData = () => {
+  const distribution = {
+    'Due Today': { count: 0, points: 0 },
+    'Due Tomorrow': { count: 0, points: 0 },
+    'Overdue': { count: 0, points: 0 },
+    'This Week': { count: 0, points: 0 },
+    'Future': { count: 0, points: 0 },
+    'No Due Date': { count: 0, points: 0 }
   };
 
+  tickets.forEach(ticket => {
+    const status = getDueDateStatus(ticket.fields.duedate);
+    if (distribution[status]) {
+      distribution[status].count++;
+      distribution[status].points += getStoryPointValue(ticket);
+    }
+  });
+
+  return Object.entries(distribution).map(([status, data]) => ({
+    status,
+    tickets: data.count,
+    storyPoints: data.points
+  }));
+};
   // Chart 3: Resource Productivity
   const resourceProductivityData = () => {
     const resources = {};
@@ -323,9 +328,17 @@ function Charts({ tickets }) {
         <div className="chart-card">
           <h3>Due Date Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={dueDateData()}>
+            <ComposedChart data={dueDateData()} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="status" />
+            
+              <XAxis 
+  dataKey="status" 
+  angle={-35} 
+  textAnchor="end" 
+  height={70}
+  interval={0}
+  tick={{ fontSize: 12 }}
+/>
               <YAxis yAxisId="left" orientation="left" stroke="#0052cc" />
               <YAxis yAxisId="right" orientation="right" stroke="#ff991f" />
               <Tooltip />

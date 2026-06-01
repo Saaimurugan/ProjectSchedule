@@ -213,7 +213,7 @@ const formatWeeklyChartData = () => {
   return (
     <div className="sprint-trends">
       <div className="sprint-trends-header">
-        <h2>Sprint Trends (Weekly View)</h2>
+        <h2>Trends</h2>
         <div className="header-info">
           <span className="info-badge">Auto-saved daily · Grouped by week (Mon–Sun)</span>
         </div>
