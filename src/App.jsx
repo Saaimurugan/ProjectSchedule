@@ -7,6 +7,7 @@ import TicketList from './components/TicketList';
 import SprintTrends from './components/SprintTrends';
 import ResourceQuality from './components/ResourceQuality';
 import DeveloperAccordion from './components/DeveloperAccordion';
+import WeeklyProgress from './components/WeeklyProgress';
 import './App.css';
 
 function App() {
@@ -40,11 +41,13 @@ function App() {
       });
 
       const rawText = await response.text();
-      let parsedData = JSON.parse(rawText);
-
-      if (parsedData.body && typeof parsedData.body === 'string') {
-        parsedData = JSON.parse(parsedData.body);
-      }
+     let parsedData = JSON.parse(rawText);
+if (parsedData.statusCode && parsedData.body) {
+  parsedData = typeof parsedData.body === 'string' ? JSON.parse(parsedData.body) : parsedData.body;
+}
+if (parsedData.body && typeof parsedData.body === 'string') {
+  parsedData = JSON.parse(parsedData.body);
+}
       if (typeof parsedData === 'string') {
         parsedData = JSON.parse(parsedData);
       }
@@ -71,6 +74,10 @@ function App() {
       const raw = await response.json();
       let parsed = raw;
       if (typeof parsed === "string") parsed = JSON.parse(parsed);
+      if (parsed.statusCode && parsed.body) {
+  // Lambda returned full API Gateway response
+        parsed = typeof parsed.body === "string" ? JSON.parse(parsed.body) : parsed.body;
+      }
       if (parsed.body && typeof parsed.body === "string") parsed = JSON.parse(parsed.body);
 
       const epics = parsed.issues || [];
@@ -82,6 +89,7 @@ function App() {
   };
 
   const fetchTickets = async (jiraConfig) => {
+    console.log('fetchTickets called with:', jiraConfig);
     setLoading(true);
     setError(null);
 
@@ -94,13 +102,19 @@ function App() {
         body: JSON.stringify(requestBody)
       });
 
-      const raw = await response.json();
-      let parsed = raw;
-      if (typeof parsed === "string") parsed = JSON.parse(parsed);
-      if (parsed.body && typeof parsed.body === "string") parsed = JSON.parse(parsed.body);
+const raw = await response.json();
+let parsed = raw;
+if (typeof parsed === "string") parsed = JSON.parse(parsed);
+if (parsed.statusCode && parsed.body) {
+  parsed = typeof parsed.body === "string" ? JSON.parse(parsed.body) : parsed.body;
+}
+if (parsed.body && typeof parsed.body === "string") parsed = JSON.parse(parsed.body);
 
-      console.log('API Response:', {
-        issuesCount: parsed.issues?.length || 0,
+// TEMP DEBUG
+console.log('PARSED KEYS:', Object.keys(parsed), 'issues count:', parsed.issues?.length, 'first key:', parsed.issues?.[0]?.key);
+
+console.log('API Response:', {
+  issuesCount: parsed.issues?.length || 0,
         totalIssues: parsed.total,
         hasSprintHistory: !!parsed.sprintHistory,
         issueSample: parsed.issues?.[0]?.key
@@ -387,6 +401,7 @@ function App() {
             <SprintTrends currentSprintData={currentSprintData} sprintHistory={sprintHistory} />
             <ResourceQuality tickets={filteredTickets} />
             <DeveloperAccordion tickets={filteredTickets} allEpics={allEpics} />
+            <WeeklyProgress tickets={filteredTickets} />
             <FilterCards
               tickets={tickets}
               filteredTickets={filteredTickets}

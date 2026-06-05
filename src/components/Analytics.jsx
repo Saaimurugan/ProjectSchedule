@@ -72,10 +72,15 @@ function Analytics({ tickets }) {
 
     const sprintCounts = {};
     tickets.forEach(ticket => {
-      const sprint = ticket.fields.sprint ||
-        ticket.fields.customfield_10020?.[0] ||
-        ticket.fields.customfield_10010?.[0];
-
+  const sprintArray = ticket.fields.customfield_10020 || 
+                      ticket.fields.customfield_10010 || [];
+  
+  // FIX: find active sprint first, not just [0]
+  const sprint = Array.isArray(sprintArray)
+    ? (sprintArray.find(s => s.state === 'active') ||
+       sprintArray.find(s => s.state === 'future') ||
+       sprintArray[sprintArray.length - 1]) // last sprint if none active
+    : (ticket.fields.sprint || null);
       if (sprint) {
         const sprintKey = `${sprint.startDate}_${sprint.endDate}`;
         if (!sprintCounts[sprintKey]) {
@@ -219,10 +224,10 @@ function Analytics({ tickets }) {
     const remainingWork = totalStoryPoints - completedStoryPoints;
 
     // Actual velocity based on real completed work
-const actualVelocity = elapsedDays > 0 && resourceCount > 0
-  ? parseFloat((completedStoryPoints / elapsedDays / resourceCount).toFixed(2))
-  : pointsPerResourcePerDay;
-const actualRemainingCapacity = Math.round(resourceCount * remainingDays * actualVelocity);
+    const actualVelocity = elapsedDays > 0 && resourceCount > 0
+      ? parseFloat((completedStoryPoints / elapsedDays / resourceCount).toFixed(2))
+      : pointsPerResourcePerDay;
+    const actualRemainingCapacity = Math.round(resourceCount * remainingDays * actualVelocity);
 
     const capacityStatus = remainingWork <= remainingCapacity ? 'On Track' : 'At Risk';
     const completionStatus = completedStoryPoints >= expectedCompletedByNow ? 'On Track' : 'Behind Schedule';

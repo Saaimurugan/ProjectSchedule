@@ -3,34 +3,6 @@ import './JiraConfig.css';
 
 const API_ENDPOINT = 'https://kadj2jyknh.execute-api.us-east-1.amazonaws.com/dev/mps';
 
-// Lightweight sprint detector — only fetches 1 ticket, only customfield_10020
-const detectOpenSprint = async () => {
-  const response = await fetch(API_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jql: 'project = CSAIM AND sprint in openSprints() ORDER BY created DESC',
-      maxResults: 1,
-      fields: ['customfield_10020'] // Only fetch sprint field — nothing else
-    })
-  });
-
-  const raw = await response.json();
-  let parsed = raw;
-  if (typeof parsed === 'string') parsed = JSON.parse(parsed);
-  if (parsed.body && typeof parsed.body === 'string') parsed = JSON.parse(parsed.body);
-
-  const sprintField = parsed.issues?.[0]?.fields?.customfield_10020;
-  if (Array.isArray(sprintField) && sprintField.length > 0) {
-    const sprint =
-      sprintField.find(s => s.state === 'active') ||
-      sprintField.find(s => s.state === 'closed') ||
-      sprintField[0];
-    return sprint?.name || null;
-  }
-  return null;
-};
-
 function JiraConfig({ onSubmit }) {
   const [jql, setJql] = useState('');
   const [detectedSprint, setDetectedSprint] = useState(null);
@@ -41,11 +13,46 @@ function JiraConfig({ onSubmit }) {
     setDetecting(true);
     setDetectError(null);
     try {
-      const sprintName = await detectOpenSprint();
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jql: 'project = CSAIM AND sprint in openSprints() ORDER BY created DESC',
+          maxResults: 10,
+          fields: ['customfield_10020', 'summary']
+        })
+      });
+
+      const raw = await response.json();
+      let parsed = raw;
+      if (typeof parsed === 'string') parsed = JSON.parse(parsed);
+      if (parsed.statusCode && parsed.body) {
+        parsed = typeof parsed.body === 'string' ? JSON.parse(parsed.body) : parsed.body;
+      }
+      if (parsed.body && typeof parsed.body === 'string') parsed = JSON.parse(parsed.body);
+
+      // Loop through tickets to find sprint name
+      let sprintName = null;
+      for (const issue of (parsed.issues || [])) {
+        const sprintField = issue?.fields?.customfield_10020;
+        if (Array.isArray(sprintField) && sprintField.length > 0) {
+          const sprint =
+            sprintField.find(s => s.state === 'active') ||
+            sprintField.find(s => s.state === 'closed') ||
+            sprintField.find(s => s.state === 'future') ||
+            sprintField[0];
+          if (sprint?.name) {
+            sprintName = sprint.name;
+            break;
+          }
+        }
+      }
+
       if (sprintName) {
         setDetectedSprint(sprintName);
         setJql(`sprint = "${sprintName}" ORDER BY created DESC`);
       } else {
+        // Fallback to openSprints if name not found
         setJql('project = CSAIM AND sprint in openSprints() ORDER BY created DESC');
         setDetectError('Could not detect sprint name — using openSprints() fallback');
       }
@@ -62,13 +69,14 @@ function JiraConfig({ onSubmit }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({ jql });
+    if (jql.trim()) onSubmit({ jql });
   };
 
   return (
     <div className="config-card">
       <h2>JIRA Configuration</h2>
 
+      {/* Detection status banner */}
       <div style={{
         marginBottom: '1rem',
         padding: '10px 14px',
@@ -117,7 +125,6 @@ function JiraConfig({ onSubmit }) {
             placeholder={detecting ? 'Detecting sprint...' : 'JQL query'}
             value={jql}
             onChange={(e) => setJql(e.target.value)}
-            disabled={detecting}
             style={{ opacity: detecting ? 0.6 : 1 }}
           />
           <div style={{ fontSize: '12px', color: '#5e6c84', marginTop: '4px' }}>
@@ -128,7 +135,7 @@ function JiraConfig({ onSubmit }) {
         <button
           type="submit"
           className="btn-primary"
-          disabled={detecting || !jql}
+          disabled={detecting || !jql.trim()}
         >
           {detecting ? 'Detecting...' : 'Fetch Tickets'}
         </button>
