@@ -10,8 +10,8 @@ const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME || 'JiraSprintData';
 export const handler = async (event) => {
   // Get credentials from environment variables
   const domain = process.env.JIRA_DOMAIN || 'https://mpscentral.atlassian.net';
-  const email = process.env.JIRA_EMAIL || 'johnpeter.r@aje.org';
-  const apiToken = process.env.JIRA_API_TOKEN || 'ATATT3xFfGF0J7C6eB3ugk1MLRz1Ob-K_ZzJ95_dlzm0DwT7T4iXQuuGkRoOPoQMOLWI5wsQjGUD9-ZsnsyFGW0g2JVGsTuDIVLGY0LPPgcrQJJH0lycLtYpkx0nib_IGDo4PbofYHex2BAN-9aoZVaCvsEFRZCyEBl92R9hrj5-zq5tQP17dgc=8DA34418';
+  const email = process.env.JIRA_EMAIL || 'johnpeter.r@mpslimited.com';
+  const apiToken = process.env.JIRA_API_TOKEN;
 
   // Get JQL from request body
   const jql = event["jql"];
