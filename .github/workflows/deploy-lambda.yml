@@ -1,0 +1,70 @@
+name: Deploy Lambda
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'lambda/**'
+      - '.github/workflows/deploy-lambda.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'lambda/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if lambda folder changed
+        id: lambda_changed
+        run: |
+          if git diff --quiet HEAD~1 HEAD -- lambda/; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Configure AWS credentials
+        if: steps.lambda_changed.outputs.changed == 'true' || github.event_name == 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set up Node.js
+        if: steps.lambda_changed.outputs.changed == 'true' || github.event_name == 'pull_request'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        if: steps.lambda_changed.outputs.changed == 'true' || github.event_name == 'pull_request'
+        run: |
+          cd lambda
+          npm install --production
+
+      - name: Deploy to AWS Lambda
+        if: github.event_name == 'push' && steps.lambda_changed.outputs.changed == 'true'
+        run: |
+          # Update Lambda function
+          # Replace FUNCTION_NAME and other values as needed
+          aws lambda update-function-code \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --zip-file fileb://$(cd lambda && zip -r function.zip . && echo function.zip)
+
+      - name: Verify deployment
+        if: github.event_name == 'push' && steps.lambda_changed.outputs.changed == 'true'
+        run: |
+          aws lambda get-function \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }}
