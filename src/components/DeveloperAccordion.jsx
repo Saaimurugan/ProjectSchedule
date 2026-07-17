@@ -96,9 +96,19 @@ function DeveloperAccordion({ tickets, allEpics = [] }) {
 
     // Rule 2: No comments for QA/Done tickets
     const status = getStatus(ticket);
-    const commentCount = ticket.fields.comment?.total || 0;
+    const commentCount = ticket.fields.comment?.total || ticket.fields.comment?.comments?.length || 0;
     if ((status.toLowerCase().includes('done') || status.toLowerCase().includes('qa')) && commentCount === 0) {
       issues.push('No comments. At least 1 comment required for QA/Done tickets');
+    }
+
+    // Rule 7: In Progress tickets not updated for 24+ hours must have comments
+    if (status.toLowerCase().includes('in progress')) {
+      const updatedDate = new Date(ticket.fields?.updated);
+      const now = new Date();
+      const hoursSinceUpdated = (now - updatedDate) / (1000 * 60 * 60);
+      if (hoursSinceUpdated >= 24 && commentCount === 0) {
+        issues.push('Tickets in Progress for more than 1 day must have at least one comment.');
+      }
     }
 
     // Rule 3: Missing required fields

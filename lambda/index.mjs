@@ -137,6 +137,38 @@ export const handler = async (event) => {
 
   const data = await response.json();
   
+  // Validate: In Progress tickets with no update for 24+ hours must have comments
+  const commentValidation = [];
+  const now = new Date();
+
+  for (const ticket of allIssues) {
+    const status = ticket.fields?.status?.name?.toLowerCase() || '';
+    const isInProgress = status.includes('in progress');
+    
+    if (isInProgress) {
+      const updatedDate = new Date(ticket.fields?.updated);
+      const hoursSinceUpdated = (now - updatedDate) / (1000 * 60 * 60);
+      
+      if (hoursSinceUpdated >= 24) {
+        const commentTotal = ticket.fields?.comment?.total || 
+                             ticket.fields?.comment?.comments?.length || 0;
+        
+        if (commentTotal === 0) {
+          commentValidation.push({
+            ticketKey: ticket.key,
+            assignee: ticket.fields?.assignee?.displayName || 'Unassigned',
+            summary: ticket.fields?.summary || '',
+            hoursSinceUpdated: Math.floor(hoursSinceUpdated),
+            status: ticket.fields?.status?.name,
+            violation: 'No comment found — comment is mandatory for In Progress tickets not updated for 24+ hours'
+          });
+        }
+      }
+    }
+  }
+
+  data.commentValidation = commentValidation;
+
   // Add story points field info to response
   if (storyPointsField) {
     data.storyPointsFieldId = storyPointsField.id;
