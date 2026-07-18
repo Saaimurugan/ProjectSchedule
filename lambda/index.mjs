@@ -1,4 +1,4 @@
-// AWS Lambda handler for JIRA API proxy and Sprint Data Management 
+// AWS Lambda handler for JIRA API proxy and Sprint Data Management
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
 
