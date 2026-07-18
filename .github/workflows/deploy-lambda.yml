@@ -23,11 +23,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Check if lambda folder changed
         id: lambda_changed
         run: |
-          if git diff --quiet HEAD~1 HEAD -- lambda/; then
+          if git diff --quiet HEAD~1 HEAD -- lambda/ 2>/dev/null; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -57,11 +59,11 @@ jobs:
       - name: Deploy to AWS Lambda
         if: github.event_name == 'push' && steps.lambda_changed.outputs.changed == 'true'
         run: |
-          # Update Lambda function
-          # Replace FUNCTION_NAME and other values as needed
+          cd lambda
+          zip -r function.zip .
           aws lambda update-function-code \
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
-            --zip-file fileb://$(cd lambda && zip -r function.zip . && echo function.zip)
+            --zip-file fileb://function.zip
 
       - name: Verify deployment
         if: github.event_name == 'push' && steps.lambda_changed.outputs.changed == 'true'
