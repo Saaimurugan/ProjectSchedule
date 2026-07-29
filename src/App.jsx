@@ -157,8 +157,11 @@ console.log('API Response:', {
   }, [tickets]);
 
   const getStoryPointValue = (issue) => {
-    const val = issue?.fields?.customfield_10033;
-    return (val !== null && val !== undefined) ? Number(val) : 0;
+    const field = issue?.key?.includes("CSAIM")
+      ? issue?.fields?.customfield_10033
+      : issue?.fields?.customfield_10140;
+
+    return Number(field ?? 0);
   };
 
   const getEpicName = (ticket) => {
