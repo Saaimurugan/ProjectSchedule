@@ -14,9 +14,10 @@ function DeveloperAccordion({ tickets, allEpics = [] }) {
   }, {});
 
   const getStoryPoints = (ticket) => {
-    return ticket.fields.customfield_10033 || 0;
+    return ticket?.key?.includes("CSAIM")
+      ? (ticket?.fields?.customfield_10033 ?? 0)
+      : (ticket?.fields?.customfield_10140 ?? 0);
   };
-
   const getStatus = (ticket) => {
     return ticket.fields.status?.name || '';
   };
@@ -510,7 +511,7 @@ function DeveloperAccordion({ tickets, allEpics = [] }) {
               if (ticket.fields?.status?.name?.toLowerCase() === 'done') {
                 epicMap[epicName].doneTickets++;
               }
-              epicMap[epicName].storyPoints += Number(ticket.fields?.customfield_10033 || 0);
+              epicMap[epicName].storyPoints += Number(getStoryPoints(ticket));
               if (ticket.fields?.duedate) {
                 epicMap[epicName].dueDates.push(ticket.fields.duedate);
               }
