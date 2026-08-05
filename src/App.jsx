@@ -5,7 +5,6 @@ import Analytics from './components/Analytics';
 import Charts from './components/Charts';
 import TicketList from './components/TicketList';
 import SprintTrends from './components/SprintTrends';
-import ResourceQuality from './components/ResourceQuality';
 import DeveloperAccordion from './components/DeveloperAccordion';
 import WeeklyProgress from './components/WeeklyProgress';
 import './App.css';
@@ -19,6 +18,7 @@ function App() {
   const [currentSprintData, setCurrentSprintData] = useState(null);
   const [sprintHistory, setSprintHistory] = useState([]);
   const [allEpics, setAllEpics] = useState([]);
+  const [activeTab, setActiveTab] = useState('scrum');
   const [activeFilter, setActiveFilter] = useState({
     storyPoints: null,
     dueDate: null,
@@ -399,19 +399,45 @@ console.log('API Response:', {
 
         {tickets.length > 0 && (
           <>
-            <Analytics tickets={filteredTickets} />
-            <Charts tickets={filteredTickets} />
-            <SprintTrends currentSprintData={currentSprintData} sprintHistory={sprintHistory} />
-            <ResourceQuality tickets={filteredTickets} />
-            <DeveloperAccordion tickets={filteredTickets} allEpics={allEpics} />
-            <WeeklyProgress tickets={filteredTickets} />
-            <FilterCards
-              tickets={tickets}
-              filteredTickets={filteredTickets}
-              onFilterChange={handleFilterChange}
-              activeFilter={activeFilter}
-            />
-            <TicketList tickets={filteredTickets} groupBy="status" />
+            {/* Tab Navigation */}
+            <div className="tab-navigation">
+              <button
+                className={`tab-btn ${activeTab === 'scrum' ? 'active' : ''}`}
+                onClick={() => setActiveTab('scrum')}
+              >
+                Scrum
+              </button>
+              <button
+                className={`tab-btn ${activeTab === 'reports' ? 'active' : ''}`}
+                onClick={() => setActiveTab('reports')}
+              >
+                Reports
+              </button>
+            </div>
+
+            {/* Scrum Tab */}
+            {activeTab === 'scrum' && (
+              <>
+                <DeveloperAccordion tickets={filteredTickets} allEpics={allEpics} />
+              </>
+            )}
+
+            {/* Reports Tab */}
+            {activeTab === 'reports' && (
+              <>
+                <Analytics tickets={filteredTickets} />
+                <Charts tickets={filteredTickets} />
+                <SprintTrends currentSprintData={currentSprintData} sprintHistory={sprintHistory} />
+                <WeeklyProgress tickets={filteredTickets} />
+                <FilterCards
+                  tickets={tickets}
+                  filteredTickets={filteredTickets}
+                  onFilterChange={handleFilterChange}
+                  activeFilter={activeFilter}
+                />
+                <TicketList tickets={filteredTickets} groupBy="status" />
+              </>
+            )}
           </>
         )}
       </main>
